@@ -22,7 +22,7 @@ class ColisResource extends Resource
 
     protected static string | UnitEnum | null $navigationGroup = 'Opérations';
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::Cube;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCube;
 
     protected static ?string $recordTitleAttribute = 'App/Models/Colis';
 
@@ -53,5 +53,8 @@ class ColisResource extends Resource
         ];
     }
 
-    
+        public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::count();
+    }
 }

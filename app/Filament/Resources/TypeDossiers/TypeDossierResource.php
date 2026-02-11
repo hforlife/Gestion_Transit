@@ -21,7 +21,7 @@ class TypeDossierResource extends Resource
 
     protected static string | UnitEnum | null $navigationGroup = 'Paramètres';
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::RectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     protected static ?string $recordTitleAttribute = ' App/Models/TypeDossier';
 
@@ -49,5 +49,9 @@ class TypeDossierResource extends Resource
             'create' => CreateTypeDossier::route('/create'),
             'edit' => EditTypeDossier::route('/{record}/edit'),
         ];
+    }
+        public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::count();
     }
 }

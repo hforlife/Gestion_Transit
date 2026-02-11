@@ -19,7 +19,7 @@ class Dashboard extends BaseDashboard
 {
     protected string $view = 'filament.pages.dashboard';
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::Home;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedHome;
 
     use HasFiltersForm;
 

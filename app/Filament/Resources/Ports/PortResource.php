@@ -21,7 +21,7 @@ class PortResource extends Resource
 
     protected static string | UnitEnum | null $navigationGroup = 'Paramètres';
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::MapPin;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedMapPin;
 
     protected static ?string $recordTitleAttribute = 'App/Models/Port';
 
@@ -49,5 +49,9 @@ class PortResource extends Resource
             'create' => CreatePort::route('/create'),
             'edit' => EditPort::route('/{record}/edit'),
         ];
+    }
+        public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::count();
     }
 }

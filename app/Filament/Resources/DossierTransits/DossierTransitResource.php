@@ -21,7 +21,7 @@ class DossierTransitResource extends Resource
 
     protected static string | UnitEnum | null $navigationGroup = 'Opérations';
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::FolderOpen;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedFolderOpen;
 
     protected static ?string $recordTitleAttribute = 'App/Models/DossierTransit';
 
@@ -49,5 +49,9 @@ class DossierTransitResource extends Resource
             'create' => CreateDossierTransit::route('/create'),
             'edit' => EditDossierTransit::route('/{record}/edit'),
         ];
+    }
+        public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::count();
     }
 }

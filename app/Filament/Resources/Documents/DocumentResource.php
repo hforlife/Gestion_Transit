@@ -18,7 +18,7 @@ class DocumentResource extends Resource
 {
     protected static ?string $model = Document::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;
 
     protected static ?string $recordTitleAttribute = 'App\Model\Document';
 
@@ -46,5 +46,9 @@ class DocumentResource extends Resource
             'create' => CreateDocument::route('/create'),
             'edit' => EditDocument::route('/{record}/edit'),
         ];
+    }
+        public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::count();
     }
 }

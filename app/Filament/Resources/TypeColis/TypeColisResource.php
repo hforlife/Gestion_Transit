@@ -21,7 +21,7 @@ class TypeColisResource extends Resource
 
     protected static string | UnitEnum | null $navigationGroup = 'Paramètres';
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::Tag;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTag;
 
     protected static ?string $recordTitleAttribute = 'App/Models/TypeColis';
 
@@ -49,5 +49,9 @@ class TypeColisResource extends Resource
             'create' => CreateTypeColis::route('/create'),
             'edit' => EditTypeColis::route('/{record}/edit'),
         ];
+    }
+        public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::count();
     }
 }

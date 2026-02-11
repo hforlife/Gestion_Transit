@@ -21,7 +21,7 @@ class ClientResource extends Resource
 
     protected static string | UnitEnum | null $navigationGroup = 'Paramètres';
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::UserGroup;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;
 
     protected static ?string $recordTitleAttribute = 'App/Models/Client';
 
@@ -49,5 +49,9 @@ class ClientResource extends Resource
             'create' => CreateClient::route('/create'),
             'edit' => EditClient::route('/{record}/edit'),
         ];
+    }
+        public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::count();
     }
 }
