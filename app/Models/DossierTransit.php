@@ -11,7 +11,6 @@ class DossierTransit extends Model
         'colis_id',
         'agent_id',
         'id_type_dossier',
-        'reference',
         'nom',
         'repertoire',
         'date_depot',

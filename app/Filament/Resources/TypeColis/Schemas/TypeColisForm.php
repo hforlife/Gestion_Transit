@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\TypeColis\Schemas;
 
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
@@ -12,7 +13,11 @@ class TypeColisForm
     {
         return $schema
             ->components([
-                TextInput::make('nom')
+                Select::make('nom')
+                ->options([
+                        'Véhicules' => 'Véhicules',
+                        'Conteneur' => 'Conteneur',
+                    ])
                     ->required(),
                 TextInput::make('description'),
                 Toggle::make('is_active')

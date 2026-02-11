@@ -10,16 +10,17 @@ use Filament\Support\Icons\Heroicon;
 class RapportColis extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::ChartBar;
-    protected static string | UnitEnum | null $navigationGroup = 'Rapports';
+    protected static string|UnitEnum|null $navigationGroup = 'Rapports';
     protected static ?int $navigationSort = 1;
     protected string $view = 'filament.pages.rapport-colis';
 
-    public function getWidgetData(): array
-{
-    return [
-        'stats' => [
-            'total' => 100,
-        ],
-    ];
-}
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            //
+            \App\Filament\Widgets\ColisGlobalStats::class,
+            \App\Filament\Widgets\ColisParStatutTable::class,
+            \App\Filament\Widgets\ColisEvolutionChart::class,
+        ];
+    }
 }

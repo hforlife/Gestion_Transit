@@ -10,12 +10,15 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('type_dossiers', function (Blueprint $table) {
+        Schema::create('livraison_operations', function (Blueprint $table) {
             $table->id();
-            $table->enum('nom', ['Conteneur', 'Véhicules']);
-            $table->string('description')->nullable();
+            $table->foreignId('colis_id')->constrained();
+            $table->foreignId('agent_id')->constrained('users');
+            $table->date('date_livraison')->nullable();
+            $table->enum('statut', ['EN_ROUTE','LIVREE'])->default('EN_ROUTE');
             $table->timestamps();
         });
+
     }
 
     /**
@@ -23,6 +26,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('type_dossiers');
+        Schema::dropIfExists('livraison_operations');
     }
 };

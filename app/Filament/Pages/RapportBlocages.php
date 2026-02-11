@@ -13,19 +13,19 @@ use App\Filament\Widgets\RapportBlocage;
 
 class RapportBlocages extends Page
 {
-        protected static string|BackedEnum|null $navigationIcon = Heroicon::ShieldExclamation;
-        protected static string | UnitEnum | null $navigationGroup = 'Rapports';
-        protected static ?int $navigationSort = 3;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::ShieldExclamation;
+    protected static string|UnitEnum|null $navigationGroup = 'Rapports';
+    protected static ?int $navigationSort = 3;
 
-        protected string $view = 'filament.pages.rapport-blocages';
+    protected string $view = 'filament.pages.rapport-blocages';
 
-         protected function getHeaderWidgets(): array
+    protected function getHeaderWidgets(): array
     {
         return [
-            //
-        BlocageStats::class,
-        RapportBlocage::class,
-        BlocagesParMoisChart::class,
+                //
+            BlocageStats::class,
+            RapportBlocage::class,
+            BlocagesParMoisChart::class,
         ];
     }
 }

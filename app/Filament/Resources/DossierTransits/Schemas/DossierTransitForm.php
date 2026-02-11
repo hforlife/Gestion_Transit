@@ -28,24 +28,6 @@ class DossierTransitForm
                 ->required()
                 ->maxLength(255),
 
-            FileUpload::make('repertoire')
-                ->label('Répertoire de stockage')
-                ->helperText('Fichier PDF/Image du document concerné.')
-                ->disk('public')
-                ->directory(
-                    fn($record) =>
-                    $record
-                    ? "dossiers-transit/{$record->id}"
-                    : 'dossiers-transit/temp'
-                )
-                ->acceptedFileTypes(['application/pdf'])
-                ->maxSize(10240) // 10 MB
-                ->preserveFilenames()
-                ->openable()
-                ->downloadable()
-                ->previewable(false)
-                ->columnSpanFull(),
-
             DatePicker::make('date_depot')
                 ->label('Date de dépôt')
                 ->native(false)

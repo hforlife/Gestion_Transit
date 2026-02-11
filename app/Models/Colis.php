@@ -14,7 +14,27 @@ class Colis extends Model
         'id_type_colis',
         'user_id',
         'id_port',
-        'client_id'
+        'client_id',
+        // port
+        'date_entree_port',
+        'date_sortie_port',
+        'status_colis_port',
+        // douane
+        'num_t1',
+        'etat_t1',
+        'declaration_reference',
+        'date_entree_douane',
+        'date_sortie_douane',
+        'status_colis_douane',
+        // expertise
+        'num_pvc',
+        'num_ae',
+        'num_cmc',
+        'etat_expertise',
+        'etat_pvc',
+        'etat_ae',
+        'etat_cmc',
+        'status',
     ];
 
     public function typeColis()
@@ -42,20 +62,20 @@ class Colis extends Model
         return $this->hasOne(DossierTransit::class);
     }
 
-    public function portOperation()
-    {
-        return $this->hasOne(PortOperation::class);
-    }
+    // public function portOperation()
+    // {
+    //     return $this->hasOne(PortOperation::class);
+    // }
 
-    public function douaneOperation()
-    {
-        return $this->hasOne(DouaneOperation::class);
-    }
+    // public function douaneOperation()
+    // {
+    //     return $this->hasOne(DouaneOperation::class);
+    // }
 
-    public function expertise()
-    {
-        return $this->hasOne(Expertise::class);
-    }
+    // public function expertise()
+    // {
+    //     return $this->hasOne(Expertise::class);
+    // }
 
     public function changeStatus($status)
     {
@@ -66,10 +86,10 @@ class Colis extends Model
     /**
      * Historique de tracking du colis
      */
-    public function trackingEvents()
-    {
-        return $this->morphMany(TrackingEvent::class, 'trackable');
-    }
+    // public function trackingEvents()
+    // {
+    //     return $this->morphMany(TrackingEvent::class, 'trackable');
+    // }
 
     /**
      * Observer automatique

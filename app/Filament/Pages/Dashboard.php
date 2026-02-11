@@ -26,10 +26,10 @@ class Dashboard extends BaseDashboard
     protected function getHeaderWidgets(): array
     {
         return [
-            ColisStats::class,
-            ColisBloques::class,
-            TransitByMonth::class,
-            LastTrackingEvents::class,
+            // ColisStats::class,
+            // ColisBloques::class,
+            // TransitByMonth::class,
+            // LastTrackingEvents::class,
         ];
     }
 }

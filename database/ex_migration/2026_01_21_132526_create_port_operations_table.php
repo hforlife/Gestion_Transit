@@ -10,16 +10,14 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('dossier_transits', function (Blueprint $table) {
+        Schema::create('port_operations', function (Blueprint $table) {
             $table->id();
-            $table->string('reference')->unique();
-            $table->string('nom');
-            // $table->string('repertoire')->nullable();
-            $table->date('date_depot')->nullable();
-            $table->enum('status', ['OUVERT', 'EN_COURS', 'CLOTURE']);
+            $table->date('date_entree_port')->nullable();
+            $table->date('date_sortie_port')->nullable();
+            $table->enum('status_colis', ['EN_ATTENTE', 'ENTRE', 'SORTI']);
 
             $table->foreignId('colis_id')->constrained('colis');
-            $table->foreignId('id_type_dossier')->constrained('type_dossiers');
+            $table->foreignId('agent_id')->constrained('users');
 
             $table->timestamps();
         });
@@ -30,6 +28,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('dossier_transits');
+        Schema::dropIfExists('port_operations');
     }
 };
