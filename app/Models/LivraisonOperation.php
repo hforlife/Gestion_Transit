@@ -15,11 +15,11 @@ class LivraisonOperation extends Model
 
     public function colis()
     {
-        $this->belongTo(Colis::class);
+        return $this->belongsTo(Colis::class);
     }
 
     public function agent()
     {
-        $this->belongTo(User::class);
+        return $this->belongsTo(User::class);
     }
 }

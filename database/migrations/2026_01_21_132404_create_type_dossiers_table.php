@@ -12,7 +12,7 @@ return new class extends Migration {
     {
         Schema::create('type_dossiers', function (Blueprint $table) {
             $table->id();
-            $table->enum('nom', ['Conteneur', 'Véhicules']);
+            $table->string('nom');
             $table->string('description')->nullable();
             $table->timestamps();
         });

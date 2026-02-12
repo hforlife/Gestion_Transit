@@ -12,7 +12,7 @@ return new class extends Migration {
     {
         Schema::create('type_colis', function (Blueprint $table) {
             $table->id();
-            $table->string('nom');
+            $table->enum('nom', ['Conteneur', 'Véhicules']);
             $table->string('description')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();

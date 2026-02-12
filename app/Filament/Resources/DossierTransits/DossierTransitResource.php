@@ -23,6 +23,8 @@ class DossierTransitResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedFolderOpen;
 
+    protected static ?int $navigationSort = 3;
+
     protected static ?string $recordTitleAttribute = 'App/Models/DossierTransit';
 
     public static function form(Schema $schema): Schema

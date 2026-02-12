@@ -24,6 +24,8 @@ class ColisResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCube;
 
+    protected static ?int $navigationSort = 1;
+
     protected static ?string $recordTitleAttribute = 'App/Models/Colis';
 
     public static function form(Schema $schema): Schema

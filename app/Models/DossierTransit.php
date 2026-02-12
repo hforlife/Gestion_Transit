@@ -12,7 +12,7 @@ class DossierTransit extends Model
         'agent_id',
         'id_type_dossier',
         'nom',
-        'repertoire',
+        'reference',
         'date_depot',
         'statut'
     ];
@@ -20,6 +20,11 @@ class DossierTransit extends Model
     public function colis()
     {
         return $this->belongsTo(Colis::class);
+    }
+
+    public function documents()
+    {
+        return $this->hasMany(Document::class, 'id_dossier_transit');
     }
 
     public function type_dossier()

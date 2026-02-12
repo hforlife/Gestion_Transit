@@ -2,18 +2,12 @@
 
 namespace App\Filament\Resources\Colis\Tables;
 
-use App\Filament\Resources\Colis\ColisResource;
-use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Grid;
-use Filament\Forms\Components\Repeater;
-use Filament\Forms\Components\TextInput;
-use Filament\Schemas\Components\Text;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Table;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
@@ -24,251 +18,217 @@ class ColisTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query) =>
+                $query->with(['typeColis', 'client', 'port', 'agent'])
+            )
+
             ->columns([
-                // Informations de base
+
+                /* ===============================
+                 |  INFOS PRINCIPALES
+                 ===============================*/
+
                 TextColumn::make('numero_bl')
                     ->label('N° BL')
                     ->searchable()
                     ->sortable()
                     ->copyable()
-                    ->weight('bold'),
-                
-                TextColumn::make('description')
-                    ->label('Description')
-                    ->limit(30)
-                    ->tooltip(fn($record) => $record->description)
-                    ->searchable(),
-                
-                // TextColumn::make('etat_colis')
-                //     ->label('Statut global')
-                //     ->badge()
-                //     ->colors([
-                //         'secondary' => 'BL_ENREGISTRE',
-                //         'info' => 'AU_PORT',
-                //         'warning' => 'A_LA_DOUANE',
-                //         'primary' => 'EN_ROUTE',
-                //         'success' => 'LIVRE',
-                //         'danger' => 'CLOTURE',
-                //     ])
-                //     ->sortable(),
-                
+                    ->weight('bold')
+                    ->description(fn ($record) => $record->description)
+                    ->limit(20),
+
                 TextColumn::make('typeColis.nom')
                     ->label('Type')
                     ->badge()
-                    ->color(fn($record) => $record->typeColis?->nom === 'Chassis' ? 'warning' : 'primary')
-                    ->sortable()
-                    ->searchable(),
-                
-                // Étape PORT
-                TextColumn::make('status_colis_port')
-                    ->label('Port')
-                    ->badge()
-                    ->colors([
-                        'secondary' => 'EN_ATTENTE',
-                        'warning' => 'ENTRE',
-                        'success' => 'SORTI',
-                    ])
-                    ->toggleable(),
-                
-                TextColumn::make('date_entree_port')
-                    ->label('Arrivée port')
-                    ->date('d/m/Y')
-                    ->toggleable()
+                    ->color(fn ($state) =>
+                        $state === 'Chassis' ? 'warning' : 'primary'
+                    )
                     ->sortable(),
-                
-                // Étape DOUANE
-                TextColumn::make('status_colis_douane')
-                    ->label('Douane')
-                    ->badge()
-                    ->colors([
-                        'secondary' => 'EN_ATTENTE',
-                        'warning' => 'ENTRE',
-                        'success' => 'SORTI',
-                    ])
-                    ->toggleable(),
-                
-                TextColumn::make('num_t1')
-                    ->label('N° T1')
-                    ->copyable()
-                    ->toggleable()
-                    ->badge()
-                    ->color(fn($state) => $state ? 'success' : 'secondary'),
-                
-                TextColumn::make('etat_t1')
-                    ->label('État T1')
-                    ->badge()
-                    ->colors([
-                        'secondary' => 'FOURNI',
-                        'success' => 'PAYE',
-                    ])
-                    ->toggleable(isToggledHiddenByDefault: true),
-                
-                // Étape EXPERTISE (spécifique Chassis)
-                TextColumn::make('etat_expertise')
-                    ->label('Expertise ONT')
-                    ->badge()
-                    ->colors([
-                        'danger' => 'EN_ATTENTE',
-                        'success' => 'EFFECTUEE',
-                    ])
-                    ->toggleable(isToggledHiddenByDefault: true),
-                
-                TextColumn::make('num_pvc')
-                    ->label('PVC')
-                    ->copyable()
-                    ->toggleable(isToggledHiddenByDefault: true)
-                    ->badge()
-                    ->color(fn($state) => $state ? 'info' : 'secondary'),
-                
-                TextColumn::make('etat_pvc')
-                    ->label('État PVC')
-                    ->badge()
-                    ->colors([
-                        'secondary' => 'NON_RECU',
-                        'warning' => 'RECU',
-                        'success' => 'PAYE',
-                    ])
-                    ->toggleable(isToggledHiddenByDefault: true),
-                
-                TextColumn::make('etat_ae')
-                    ->label('AE')
-                    ->badge()
-                    ->colors([
-                        'danger' => 'NON_VALIDE',
-                        'success' => 'VALIDE',
-                    ])
-                    ->toggleable(isToggledHiddenByDefault: true),
-                
-                TextColumn::make('num_cmc')
-                    ->label('CMC')
-                    ->copyable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                
-                TextColumn::make('etat_cmc')
-                    ->label('État CMC')
-                    ->badge()
-                    ->colors([
-                        'secondary' => 'NON_RECU',
-                        'success' => 'RECU',
-                    ])
-                    ->toggleable(isToggledHiddenByDefault: true),
-                
-                TextColumn::make('status')
-                    ->label('Clôture')
-                    ->badge()
-                    ->colors([
-                        'warning' => 'EN_COURS',
-                        'success' => 'TERMINE',
-                    ])
-                    ->toggleable(),
-                
-                // Relations
+
                 TextColumn::make('client.nom')
                     ->label('Client')
-                    ->sortable()
                     ->searchable()
-                    ->toggleable(),
-                
+                    ->sortable(),
+
                 TextColumn::make('port.nom')
                     ->label('Port')
                     ->sortable()
                     ->toggleable(),
-                
-                TextColumn::make('agent.name')
-                    ->label('Agent')
+
+                /* ===============================
+                 |  PORT
+                 ===============================*/
+
+                TextColumn::make('status_colis_port')
+                    ->label('Port')
+                    ->badge()
+                    ->color(fn ($state) => match ($state) {
+                        'EN_ATTENTE' => 'secondary',
+                        'ENTRE' => 'warning',
+                        'SORTI' => 'success',
+                        default => 'gray',
+                    }),
+
+                TextColumn::make('date_entree_port')
+                    ->label('Arrivée')
+                    ->date('d/m/Y')
                     ->sortable()
+                    ->toggleable(),
+
+                /* ===============================
+                 |  DOUANE
+                 ===============================*/
+
+                TextColumn::make('status_colis_douane')
+                    ->label('Douane')
+                    ->badge()
+                    ->color(fn ($state) => match ($state) {
+                        'EN_ATTENTE' => 'secondary',
+                        'ENTRE' => 'warning',
+                        'SORTI' => 'success',
+                        default => 'gray',
+                    }),
+
+                TextColumn::make('num_t1')
+                    ->label('T1')
+                    ->badge()
+                    ->copyable()
+                    ->color(fn ($state) =>
+                        filled($state) ? 'success' : 'secondary'
+                    )
+                    ->toggleable(),
+
+                TextColumn::make('etat_t1')
+                    ->label('État T1')
+                    ->badge()
+                    ->color(fn ($state) =>
+                        $state === 'PAYE' ? 'success' : 'secondary'
+                    )
                     ->toggleable(isToggledHiddenByDefault: true),
-                
-                // Dates système
+
+                /* ===============================
+                 |  EXPERTISE
+                 ===============================*/
+
+                TextColumn::make('etat_expertise')
+                    ->label('Expertise')
+                    ->badge()
+                    ->color(fn ($state) =>
+                        $state === 'EFFECTUEE' ? 'success' : 'danger'
+                    )
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('etat_pvc')
+                    ->label('PVC')
+                    ->badge()
+                    ->color(fn ($state) => match ($state) {
+                        'NON_RECU' => 'secondary',
+                        'RECU' => 'warning',
+                        'PAYE' => 'success',
+                        default => 'gray',
+                    })
+                    ->toggleable(),
+
+                TextColumn::make('etat_ae')
+                    ->label('AE')
+                    ->badge()
+                    ->color(fn ($state) =>
+                        $state === 'VALIDE' ? 'success' : 'danger'
+                    )
+                    ->toggleable(),
+
+                TextColumn::make('etat_cmc')
+                    ->label('CMC')
+                    ->badge()
+                    ->color(fn ($state) =>
+                        $state === 'RECU' ? 'success' : 'secondary'
+                    )
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                /* ===============================
+                 |  CLOTURE
+                 ===============================*/
+
+                TextColumn::make('status')
+                    ->label('Clôture')
+                    ->badge()
+                    ->color(fn ($state) =>
+                        $state === 'TERMINE' ? 'success' : 'warning'
+                    ),
+
+                IconColumn::make('is_late')
+                    ->label('Retard')
+                    ->boolean()
+                    ->getStateUsing(fn ($record) =>
+                        $record->status !== 'TERMINE'
+                        && $record->created_at->diffInDays(now()) > 15
+                    )
+                    ->color('danger'),
+
+                /* ===============================
+                 |  SYSTEME
+                 ===============================*/
+
                 TextColumn::make('created_at')
                     ->label('Créé le')
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                
-                TextColumn::make('updated_at')
-                    ->label('Mis à jour')
-                    ->dateTime('d/m/Y H:i')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+
             ])
+
             ->filters([
-                // Filtre par statut global
-                // SelectFilter::make('etat_colis')
-                //     ->label('Statut')
-                //     ->options([
-                //         'BL_ENREGISTRE' => 'BL enregistré',
-                //         'AU_PORT' => 'Au port',
-                //         'A_LA_DOUANE' => 'À la douane',
-                //         'EN_ROUTE' => 'En route',
-                //         'LIVRE' => 'Livré',
-                //         'CLOTURE' => 'Clôturé',
-                //     ]),
-                
-                // Filtre par type de colis
+
                 SelectFilter::make('id_type_colis')
-                    ->label('Type de colis')
+                    ->label('Type')
                     ->relationship('typeColis', 'nom'),
-                
-                // Filtre par client
+
                 SelectFilter::make('client_id')
-                    ->label('Client')
                     ->relationship('client', 'nom')
                     ->searchable(),
-                
-                // Filtre par port
-                SelectFilter::make('id_port')
-                    ->label('Port')
-                    ->relationship('port', 'nom'),
-                
-                // Filtre par état d'expertise (utile pour les chassis)
-                SelectFilter::make('etat_expertise')
-                    ->label('Expertise ONT')
+
+                SelectFilter::make('status')
                     ->options([
-                        'EN_ATTENTE' => 'En attente',
-                        'EFFECTUEE' => 'Effectuée',
+                        'EN_COURS' => 'En cours',
+                        'TERMINE' => 'Terminé',
                     ]),
-                
-                // Filtre par statut douane
-                SelectFilter::make('status_colis_douane')
-                    ->label('Statut douane')
-                    ->options([
-                        'EN_ATTENTE' => 'En attente',
-                        'ENTRE' => 'Entré',
-                        'SORTI' => 'Sorti',
-                    ]),
-                
-                // Filtre personnalisé pour les chassis avec PVC payé mais AE non validé
+
+                /* ✅ Correction logique du filtre personnalisé */
                 Filter::make('expertise_en_cours')
                     ->label('Expertise en cours')
-                    ->query(fn (Builder $query) => $query
-                        ->where('etat_pvc', 'PAYE')
-                        ->where('etat_ae', 'NON_VALIDE')
-                        ->orWhere('etat_ae', 'VALIDE')
-                        ->where('etat_cmc', 'NON_RECU'))
+                    ->query(fn (Builder $query) =>
+                        $query->where('etat_pvc', 'PAYE')
+                              ->where(function ($q) {
+                                  $q->where('etat_ae', 'NON_VALIDE')
+                                    ->orWhere('etat_cmc', 'NON_RECU');
+                              })
+                    )
                     ->toggle(),
+
             ])
+
             ->defaultSort('created_at', 'desc')
+
             ->recordActions([
-                // Action::make('tracking')
-                //     ->label('Suivi')
-                //     ->icon('heroicon-o-clock')
-                //     ->url(fn($record) => ColisResource::getUrl('tracking', ['record' => $record]))
-                //     ->openUrlInNewTab()
-                //     ->color('info'),
-                
+
+                ViewAction::make(),
+
                 EditAction::make()
-                    ->visible(fn($record) => $record->etat_colis !== 'CLOTURE'),
-                
-                ViewAction::make()
-                    ->label('Détails'),
+                    ->visible(fn ($record) =>
+                        $record->status !== 'TERMINE'
+                    ),
+
             ])
+
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
-                        ->visible(fn() => auth()->user()?->hasRole('admin')),
+                        ->visible(fn () =>
+                            auth()->user()?->hasRole('admin')
+                        ),
                 ]),
             ])
-            ->poll('10s');
+
+            ->poll('15s');
     }
 }

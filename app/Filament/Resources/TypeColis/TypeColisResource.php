@@ -23,6 +23,8 @@ class TypeColisResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTag;
 
+    protected static ?int $navigationSort = 1;
+
     protected static ?string $recordTitleAttribute = 'App/Models/TypeColis';
 
     public static function form(Schema $schema): Schema

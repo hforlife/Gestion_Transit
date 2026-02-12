@@ -23,6 +23,8 @@ class TypeDossierResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    protected static ?int $navigationSort = 2;
+
     protected static ?string $recordTitleAttribute = ' App/Models/TypeDossier';
 
     public static function form(Schema $schema): Schema
