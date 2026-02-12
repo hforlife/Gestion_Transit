@@ -20,6 +20,15 @@ return new class extends Migration {
             $table->foreignId('user_id')->constrained('users');
             $table->foreignId('id_port')->constrained('ports');
             $table->foreignId('client_id')->constrained('clients');
+            $table->enum('etat_colis', [
+                'BL_ENREGISTRE',
+                'AU_PORT',
+                'A_LA_DOUANE',
+                'EXPERTISE',
+                'EN_ROUTE',
+                'LIVRE',
+                'CLOTURE'
+            ])->default('BL_ENREGISTRE');
 
             // Port
             $table->date('date_entree_port')->nullable();

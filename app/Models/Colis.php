@@ -15,6 +15,7 @@ class Colis extends Model
         'user_id',
         'id_port',
         'client_id',
+        'etat_colis',
         // port
         'date_entree_port',
         'date_sortie_port',
