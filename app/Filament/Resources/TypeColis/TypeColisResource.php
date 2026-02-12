@@ -19,11 +19,7 @@ class TypeColisResource extends Resource
 {
     protected static ?string $model = TypeColis::class;
 
-    protected static string | UnitEnum | null $navigationGroup = 'Paramètres';
-
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTag;
-
-    protected static ?int $navigationSort = 1;
 
     protected static ?string $recordTitleAttribute = 'App/Models/TypeColis';
 

@@ -19,11 +19,7 @@ class TypeDossierResource extends Resource
 {
     protected static ?string $model = TypeDossier::class;
 
-    protected static string | UnitEnum | null $navigationGroup = 'Paramètres';
-
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
-
-    protected static ?int $navigationSort = 2;
 
     protected static ?string $recordTitleAttribute = ' App/Models/TypeDossier';
 
