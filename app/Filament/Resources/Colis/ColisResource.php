@@ -5,7 +5,6 @@ namespace App\Filament\Resources\Colis;
 use App\Filament\Resources\Colis\Pages\CreateColis;
 use App\Filament\Resources\Colis\Pages\EditColis;
 use App\Filament\Resources\Colis\Pages\ListColis;
-use App\Filament\Resources\Colis\Pages\ViewColisTracking;
 use App\Filament\Resources\Colis\Schemas\ColisForm;
 use App\Filament\Resources\Colis\Tables\ColisTable;
 use App\Models\Colis;
@@ -51,7 +50,6 @@ class ColisResource extends Resource
             'index' => ListColis::route('/'),
             'create' => CreateColis::route('/create'),
             'edit' => EditColis::route('/{record}/edit'),
-            'view' => Pages\ViewColisTracking::route('/{record}'),
         ];
     }
 

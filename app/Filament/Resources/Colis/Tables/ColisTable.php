@@ -193,7 +193,6 @@ class ColisTable
                         'TERMINE' => 'Terminé',
                     ]),
 
-                /* ✅ Correction logique du filtre personnalisé */
                 Filter::make('expertise_en_cours')
                     ->label('Expertise en cours')
                     ->query(fn (Builder $query) =>
@@ -211,8 +210,18 @@ class ColisTable
 
             ->recordActions([
 
-                ViewAction::make(),
+                /* ===============================
+                 |  VIEW ACTION
+                 ===============================*/
+                ViewAction::make('view')
+                    ->label('Voir')
+                    ->modalHeading(fn ($record) => "Détails du colis N° {$record->numero_bl}")
+                    // ->modalContent(fn ($record) => view('filament.colis.view', ['colis' => $record])) // Blade personnalisé
+                    ->icon('heroicon-o-eye'),
 
+                /* ===============================
+                 |  EDIT ACTION
+                 ===============================*/
                 EditAction::make()
                     ->visible(fn ($record) =>
                         $record->status !== 'TERMINE'
@@ -224,7 +233,7 @@ class ColisTable
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
                         ->visible(fn () =>
-                            auth()->user()?->hasRole('admin')
+                            auth()->user()?->hasRole('super_admin')
                         ),
                 ]),
             ])

@@ -3,7 +3,8 @@
 namespace App\Filament\Resources\Colis\Schemas;
 
 use App\Models\TypeColis;
-use Filament\Forms\Components\Placeholder;
+use Filament\Schemas\Components\Placeholder;
+use Illuminate\Support\HtmlString;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
@@ -11,10 +12,12 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Card;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Textarea;
+use Filament\Schemas\Components\Html;
 
 class ColisForm
 {
@@ -22,18 +25,18 @@ class ColisForm
     {
         $data = $livewire->form->getState();
 
- // 🔥 crée le record si pas encore créé
-                        if (!$livewire->record) {
-                            $livewire->record = $livewire->getModel()::create(
-                                $livewire->form->getState()
-                            );
-                        } else {
+        // 🔥 crée le record si pas encore créé
+        if (!$livewire->record) {
+            $livewire->record = $livewire->getModel()::create(
+                $livewire->form->getState()
+            );
+        } else {
 
-                            // 🔥 update sinon
-                            $livewire->record->update(
-                                $livewire->form->getState()
-                            );
-                        }
+            // 🔥 update sinon
+            $livewire->record->update(
+                $livewire->form->getState()
+            );
+        }
     }
 
     public static function configure(Schema $schema): Schema
@@ -48,7 +51,8 @@ class ColisForm
                     |--------------------------------------------------------------------------
                     */
                     Step::make('Enregistrement')
-                        ->visible(fn () =>
+                        ->visible(
+                            fn() =>
                             auth()->user()?->hasRole(['super_admin', 'agent_saisie'])
                         )
                         ->schema([
@@ -101,7 +105,7 @@ class ColisForm
                                     ]),
                                 ]),
                         ])
-                        ->afterValidation(fn ($livewire) => self::saveRecord($livewire)),
+                        ->afterValidation(fn($livewire) => self::saveRecord($livewire)),
 
                     /*
                     |--------------------------------------------------------------------------
@@ -109,7 +113,8 @@ class ColisForm
                     |--------------------------------------------------------------------------
                     */
                     Step::make('Port')
-                        ->visible(fn () =>
+                        ->visible(
+                            fn() =>
                             auth()->user()?->hasRole(['super_admin', 'agent_transit'])
                         )
                         ->schema([
@@ -131,7 +136,7 @@ class ColisForm
                                     ->native(false),
                             ]),
                         ])
-                        ->afterValidation(fn ($livewire) => self::saveRecord($livewire)),
+                        ->afterValidation(fn($livewire) => self::saveRecord($livewire)),
 
                     /*
                     |--------------------------------------------------------------------------
@@ -139,7 +144,8 @@ class ColisForm
                     |--------------------------------------------------------------------------
                     */
                     Step::make('Douane')
-                        ->visible(fn () =>
+                        ->visible(
+                            fn() =>
                             auth()->user()?->hasRole(['super_admin', 'agent_transit'])
                         )
                         ->schema([
@@ -172,173 +178,166 @@ class ColisForm
                                     ->native(false),
                             ]),
                         ])
-                        ->afterValidation(fn ($livewire) => self::saveRecord($livewire)),
+                        ->afterValidation(fn($livewire) => self::saveRecord($livewire)),
 
                     /*
                     |--------------------------------------------------------------------------
                     | STEP 4 : EXPERTISE
                     |--------------------------------------------------------------------------
                     */
-/*
-|--------------------------------------------------------------------------
-| STEP 4 : EXPERTISE
-|--------------------------------------------------------------------------
-*/
-Step::make('Expertise')
-    ->visible(function ($get, $livewire) {
-        // Récupérer l'ID du type de colis
-        $typeColisId = $get('id_type_colis');
+                    Step::make('Expertise')
 
-        // Si pas encore sélectionné, on cache l'étape
-        if (!$typeColisId && !$livewire->record) {
-            return false;
-        }
+                        ->visible(function ($get, $livewire) {
 
-        // Récupérer le type de colis
-        $type = null;
-        if ($typeColisId) {
-            $type = TypeColis::find($typeColisId);
-        } elseif ($livewire->record && $livewire->record->typeColis) {
-            $type = $livewire->record->typeColis;
-        }
+                            $typeId = $get('id_type_colis')
+                                ?? $livewire->record?->id_type_colis;
 
-        // Vérifier si c'est un véhicule
-        $isVehicule = $type && strtolower($type->nom) === 'Véhicules';
+                            if (!$typeId) {
+                                return false;
+                            }
 
-        // Visible uniquement pour les véhicules OU super_admin
-        return $isVehicule || auth()->user()?->hasRole('super_admin');
-    })
-    ->schema(function ($get, $livewire) {
-        // Vérifier si c'est un véhicule
-        $typeColisId = $get('id_type_colis');
-        $type = null;
+                            $type = TypeColis::find($typeId);
 
-        if ($typeColisId) {
-            $type = TypeColis::find($typeColisId);
-        } elseif ($livewire->record && $livewire->record->typeColis) {
-            $type = $livewire->record->typeColis;
-        }
+                            $isVehicule = $type
+                                && strcasecmp($type->nom, 'Véhicules') === 0;
 
-        $isVehicule = $type && strtolower($type->nom) === 'Véhicules';
+                            return $isVehicule
+                                || auth()->user()?->hasRole('super_admin');
+                        })
 
-        // Si ce n'est PAS un véhicule, afficher un message d'information
-        if (!$isVehicule) {
-            return [
-                Section::make('Expertise non requise')
-                    ->icon('heroicon-o-information-circle')
-                    ->schema([
-                        Placeholder::make('message_expertise')
-                            ->label('')
-                            ->content(function () use ($type) {
-                                $typeName = $type?->nom ?? 'Conteneur';
-                                return new \Illuminate\Support\HtmlString(
-                                    '<div class="p-4 bg-blue-50 rounded-lg border border-blue-200">' .
-                                    '<div class="flex items-center gap-3">' .
-                                    '<svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">' .
-                                    '<path stroke-linecap="round" stroke-linecap="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>' .
-                                    '</svg>' .
-                                    '<div>' .
-                                    '<h3 class="text-sm font-medium text-blue-800">Colis de type : ' . e($typeName) . '</h3>' .
-                                    '<p class="text-sm text-blue-700 mt-1">' .
-                                    'L\'expertise ONT est uniquement requise pour les colis de type <strong>Véhicules</strong> (chassis, voitures, etc.). ' .
-                                    'Ce colis ne nécessite donc pas d\'expertise.' .
-                                    '</p>' .
-                                    '</div>' .
-                                    '</div>' .
-                                    '</div>'
-                                );
-                            })
-                            ->columnSpanFull(),
-                    ])
-                    ->columnSpanFull(),
-            ];
-        }
+                        ->schema(function ($get, $livewire) {
 
-        // Sinon, afficher le formulaire d'expertise normal
-        return [
-            Grid::make(2)->schema([
-                Select::make('etat_expertise')
-                    ->label('État de l\'expertise')
-                    ->options([
-                        'EN_ATTENTE' => 'En attente',
-                        'EFFECTUEE' => 'Effectuée',
-                    ])
-                    ->columnSpanFull()
-                    ->default('EN_ATTENTE')
-                    ->live()
-                    ->helperText('Statut global de la procédure d\'expertise'),
+                            $typeId = $get('id_type_colis')
+                                ?? $livewire->record?->id_type_colis;
 
-                // Section PVC
-                Section::make('Procès-Verbal de Contrôle (PVC)')
-                    ->compact()
-                    ->schema([
-                        Grid::make(2)->schema([
-                            TextInput::make('num_pvc')
-                                ->label('Numéro PVC')
-                                ->placeholder('Ex: PVC-2026-001')
-                                ->maxLength(50)
-                                ->required(fn ($get) => $get('etat_expertise') === 'EFFECTUEE')
-                                ->helperText('Numéro du procès-verbal de contrôle'),
+                            $type = $typeId ? TypeColis::find($typeId) : null;
 
-                            Select::make('etat_pvc')
-                                ->label('État PVC')
-                                ->options([
-                                    'NON_RECU' => 'Non reçu',
-                                    'RECU' => 'Reçu',
-                                    'PAYE' => 'Payé',
-                                ])
-                                ->default('NON_RECU'),
-                        ]),
-                    ])
-                    ->columnSpanFull(),
+                            $isVehicule = $type
+                                && strcasecmp($type->nom, 'Véhicules') === 0;
 
-                // Section AE
-                Section::make('Autorisation d\'Enlèvement (AE)')
-                    ->compact()
-                    ->schema([
-                        Grid::make(2)->schema([
-                            TextInput::make('num_ae')
-                                ->label('Numéro AE')
-                                ->placeholder('Ex: AE-2026-001')
-                                ->maxLength(50)
-                                ->helperText('Autorisation d\'enlèvement délivrée par l\'ONT'),
+                            /*
+                            |--------------------------------------------------------------------------
+                            | SI PAS VEHICULE → MESSAGE
+                            |--------------------------------------------------------------------------
+                            */
+                            if (!$isVehicule) {
 
-                            Select::make('etat_ae')
-                                ->label('État AE')
-                                ->options([
-                                    'NON_VALIDE' => 'Non valide',
-                                    'VALIDE' => 'Valide',
-                                ])
-                                ->default('NON_VALIDE'),
-                        ]),
-                    ])
-                    ->columnSpanFull(),
+                                return [
 
-                // Section CMC
-                Section::make('Certificat de Mise en Conformité (CMC)')
-                    ->compact()
-                    ->schema([
-                        Grid::make(2)->schema([
-                            TextInput::make('num_cmc')
-                                ->label('Numéro CMC')
-                                ->placeholder('Ex: CMC-2026-001')
-                                ->maxLength(50)
-                                ->helperText('Certificat de mise en conformité'),
+                                    Section::make('Expertise non requise')
+                                        ->icon('heroicon-o-information-circle')
+                                        ->schema([
 
-                            Select::make('etat_cmc')
-                                ->label('État CMC')
-                                ->options([
-                                    'NON_RECU' => 'Non reçu',
-                                    'RECU' => 'Reçu',
-                                ])
-                                ->default('NON_RECU'),
-                        ]),
-                    ])
-                    ->columnSpanFull(),
-            ]),
-        ];
-    })
-    ->afterValidation(fn ($livewire) => self::saveRecord($livewire)),
+                                            Html::make('info_expertise')
+                                                ->content(new HtmlString(
+                                                    '<div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <h3 class="text-sm font-semibold text-blue-800">
+                        Type de colis : ' . e($type?->nom ?? 'Conteneur') . '
+                    </h3>
+                    <p class="text-sm text-blue-700 mt-2">
+                        L\'expertise ONT est uniquement requise pour les colis 
+                        de type <strong>Véhicules</strong>.
+                        Ce colis ne nécessite donc pas d\'expertise.
+                    </p>
+                </div>'
+                                                ))
+                                                ->columnSpanFull(),
+
+                                        ])
+                                        ->columnSpanFull(),
+
+                                ];
+                            }
+
+                            /*
+                            |--------------------------------------------------------------------------
+                            | SI VEHICULE → FORMULAIRE
+                            |--------------------------------------------------------------------------
+                            */
+
+                            return [
+
+                                Grid::make(2)->schema([
+
+                                    Select::make('etat_expertise')
+                                        ->label('État de l\'expertise')
+                                        ->options([
+                                            'EN_ATTENTE' => 'En attente',
+                                            'EFFECTUEE' => 'Effectuée',
+                                        ])
+                                        ->default('EN_ATTENTE')
+                                        ->live()
+                                        ->columnSpanFull(),
+
+                                    Section::make('Procès-Verbal de Contrôle (PVC)')
+                                        ->compact()
+                                        ->schema([
+                                            Grid::make(2)->schema([
+
+                                                TextInput::make('num_pvc')
+                                                    ->label('Numéro PVC')
+                                                    ->maxLength(50)
+                                                    ->required(
+                                                        fn($get) =>
+                                                        $get('etat_expertise') === 'EFFECTUEE'
+                                                    ),
+
+                                                Select::make('etat_pvc')
+                                                    ->options([
+                                                        'NON_RECU' => 'Non reçu',
+                                                        'RECU' => 'Reçu',
+                                                        'PAYE' => 'Payé',
+                                                    ])
+                                                    ->default('NON_RECU'),
+
+                                            ]),
+                                        ])
+                                        ->columnSpanFull(),
+
+                                    Section::make('Autorisation d\'Enlèvement (AE)')
+                                        ->compact()
+                                        ->schema([
+                                            Grid::make(2)->schema([
+
+                                                TextInput::make('num_ae')
+                                                    ->maxLength(50),
+
+                                                Select::make('etat_ae')
+                                                    ->options([
+                                                        'NON_VALIDE' => 'Non valide',
+                                                        'VALIDE' => 'Valide',
+                                                    ])
+                                                    ->default('NON_VALIDE'),
+
+                                            ]),
+                                        ])
+                                        ->columnSpanFull(),
+
+                                    Section::make('Certificat de Mise en Conformité (CMC)')
+                                        ->compact()
+                                        ->schema([
+                                            Grid::make(2)->schema([
+
+                                                TextInput::make('num_cmc')
+                                                    ->maxLength(50),
+
+                                                Select::make('etat_cmc')
+                                                    ->options([
+                                                        'NON_RECU' => 'Non reçu',
+                                                        'RECU' => 'Reçu',
+                                                    ])
+                                                    ->default('NON_RECU'),
+
+                                            ]),
+                                        ])
+                                        ->columnSpanFull(),
+
+                                ]),
+
+                            ];
+                        })
+
+                        ->afterValidation(fn($livewire) => self::saveRecord($livewire)),
 
                     /*
                     |--------------------------------------------------------------------------
@@ -346,7 +345,8 @@ Step::make('Expertise')
                     |--------------------------------------------------------------------------
                     */
                     Step::make('Livraison')
-                        ->visible(fn () =>
+                        ->visible(
+                            fn() =>
                             auth()->user()?->hasRole(['super_admin', 'agent_saisie'])
                         )
                         ->schema([
@@ -363,15 +363,16 @@ Step::make('Expertise')
                                     ->native(false),
                             ]),
                         ])
-                        ->afterValidation(fn ($livewire) => self::saveRecord($livewire)),
+                        ->afterValidation(fn($livewire) => self::saveRecord($livewire)),
 
-                        /*
-                    |--------------------------------------------------------------------------
-                    | STEP 6 : CLOTURE
-                    |--------------------------------------------------------------------------
-                    */
+                    /*
+                |--------------------------------------------------------------------------
+                | STEP 6 : CLOTURE
+                |--------------------------------------------------------------------------
+                */
                     Step::make('Finalisation')
-                        ->visible(fn () =>
+                        ->visible(
+                            fn() =>
                             auth()->user()?->hasRole(['super_admin', 'agent_saisie'])
                         )
                         ->schema([
@@ -386,13 +387,13 @@ Step::make('Expertise')
                                     ->columnSpanFull(),
                             ]),
                         ])
-                        ->afterValidation(fn ($livewire) => self::saveRecord($livewire)),
+                        ->afterValidation(fn($livewire) => self::saveRecord($livewire)),
                 ])
 
 
-                ->persistStepInQueryString()
-                ->columnSpanFull()
-                ->columns(1),
+                    ->persistStepInQueryString()
+                    ->columnSpanFull()
+                    ->columns(1),
             ]);
     }
 }
