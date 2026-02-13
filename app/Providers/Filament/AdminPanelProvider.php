@@ -46,43 +46,44 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
+            ->viteTheme('resources/css/filament/admin/theme.css')
             ->login()
-            ->navigation(function(NavigationBuilder $builder) {
-                return $builder->groups([
-                    NavigationGroup::make('Tableau de bord')
-                        ->items([
-                            ...Dashboard::getNavigationItems(),
-                        ]),
-                    NavigationGroup::make('Gestion de transit')
-                        ->items([
-                            ...ColisResource::getNavigationItems(),
-                        ]),
-                    NavigationGroup::make('Archives')
-                        ->items([
-                            ...DossierTransitResource::getNavigationItems(),
-                            ...DocumentResource::getNavigationItems(),
-                        ]),
-                    NavigationGroup::make('Gestion des Utilisateurs')
-                        ->items([
-                            ...ClientResource::getNavigationItems(),
-                            ...UserResource::getNavigationItems(),
-                        ]),
-                   NavigationGroup::make('Rapports')
-                    ->items([
-                        ...RapportColis::getNavigationItems(),
-                        ...RapportClients::getNavigationItems(),
-                        ...RapportBlocages::getNavigationItems(),
+            // ->navigation(function(NavigationBuilder $builder) {
+            //     return $builder->groups([
+            //         NavigationGroup::make('Tableau de bord')
+            //             ->items([
+            //                 ...Dashboard::getNavigationItems(),
+            //             ]),
+            //         NavigationGroup::make('Gestion de transit')
+            //             ->items([
+            //                 ...ColisResource::getNavigationItems(),
+            //             ]),
+            //         NavigationGroup::make('Archives')
+            //             ->items([
+            //                 ...DossierTransitResource::getNavigationItems(),
+            //                 ...DocumentResource::getNavigationItems(),
+            //             ]),
+            //         NavigationGroup::make('Gestion des Utilisateurs')
+            //             ->items([
+            //                 ...ClientResource::getNavigationItems(),
+            //                 ...UserResource::getNavigationItems(),
+            //             ]),
+            //        NavigationGroup::make('Rapports')
+            //         ->items([
+            //             ...RapportColis::getNavigationItems(),
+            //             ...RapportClients::getNavigationItems(),
+            //             ...RapportBlocages::getNavigationItems(),
 
-                    ]),
-                   NavigationGroup::make('Paramètres du Système')
-                    ->items([
-                        ...RoleResource::getNavigationItems(),
-                        ...TypeColisResource::getNavigationItems(),
-                        ...TypeDossierResource::getNavigationItems(),
-                        ...PortResource::getNavigationItems(),
-                    ])
-                ]);
-            })
+            //         ]),
+            //        NavigationGroup::make('Paramètres du Système')
+            //         ->items([
+            //             ...RoleResource::getNavigationItems(),
+            //             ...TypeColisResource::getNavigationItems(),
+            //             ...TypeDossierResource::getNavigationItems(),
+            //             ...PortResource::getNavigationItems(),
+            //         ])
+            //     ]);
+            // })
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([

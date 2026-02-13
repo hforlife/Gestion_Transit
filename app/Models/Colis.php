@@ -36,6 +36,10 @@ class Colis extends Model
         'etat_ae',
         'etat_cmc',
         'status',
+        // livraison
+        'date_livraison',
+        'status_colis_livraison',
+        'commentaires_cloture'
     ];
 
     public function typeColis()
