@@ -47,9 +47,11 @@ class ColisResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListColis::route('/'),
+            // 'index' => ListColis::route('/'),
             'create' => CreateColis::route('/create'),
             'edit' => EditColis::route('/{record}/edit'),
+            'conteneurs' => Pages\ListConteneurs::route('/conteneurs'),
+            'vehicules'  => Pages\ListVehicules::route('/vehicules'),
         ];
     }
 
