@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Widgets;
+namespace App\Filament\Widgets\Colis;
 
 use App\Models\Colis;
 use Filament\Tables;
