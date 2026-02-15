@@ -9,9 +9,12 @@ use Filament\Support\Icons\Heroicon;
 
 class RapportColis extends Page
 {
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChartBar;
+    // protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChartBar;
+
     protected static string|UnitEnum|null $navigationGroup = 'Rapports';
+
     protected static ?int $navigationSort = 1;
+
     protected string $view = 'filament.pages.rapport-colis';
 
     protected function getHeaderWidgets(): array

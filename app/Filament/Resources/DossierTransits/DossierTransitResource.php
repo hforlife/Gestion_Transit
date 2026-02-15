@@ -19,11 +19,11 @@ class DossierTransitResource extends Resource
 {
     protected static ?string $model = DossierTransit::class;
 
-    protected static string | UnitEnum | null $navigationGroup = 'Opérations';
+    protected static string | UnitEnum | null $navigationGroup = 'Archives';
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedFolderOpen;
+    // protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedFolderOpen;
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 1;
 
     protected static ?string $recordTitleAttribute = 'App/Models/DossierTransit';
 

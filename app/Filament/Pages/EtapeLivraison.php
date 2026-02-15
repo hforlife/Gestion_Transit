@@ -31,7 +31,7 @@ class EtapeLivraison extends Page implements HasTable
 {
     use InteractsWithTable;
 
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-truck';
+    // protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-truck';
     
     protected static ?string $navigationLabel = 'Livraison';
     

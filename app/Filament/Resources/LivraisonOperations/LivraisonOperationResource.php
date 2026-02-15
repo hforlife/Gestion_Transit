@@ -19,7 +19,7 @@ class LivraisonOperationResource extends Resource
 {
     protected static ?string $model = LivraisonOperation::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTruck;
+    // protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTruck;
 
     protected static string | UnitEnum | null $navigationGroup = 'Opérations';
 

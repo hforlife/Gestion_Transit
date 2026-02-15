@@ -12,8 +12,10 @@ use Filament\Support\Icons\Heroicon;
 
 class RapportClients extends Page
 {
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUsers;
+//     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUsers;
+
     protected static string | UnitEnum | null $navigationGroup = 'Rapports';
+    
     protected static ?int $navigationSort = 2;
     
     protected string $view = 'filament.pages.rapport-clients';

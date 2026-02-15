@@ -15,13 +15,16 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
+
 class ColisResource extends Resource
 {
+    
+
     protected static ?string $model = Colis::class;
 
-    protected static string | UnitEnum | null $navigationGroup = 'Opérations';
+    protected static string | UnitEnum | null $navigationGroup = 'Colis';
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCube;
+    // protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCube;
 
     protected static ?int $navigationSort = 1;
 
@@ -47,11 +50,11 @@ class ColisResource extends Resource
     public static function getPages(): array
     {
         return [
-            // 'index' => ListColis::route('/'),
+            'index' => ListColis::route('/'),
             'create' => CreateColis::route('/create'),
             'edit' => EditColis::route('/{record}/edit'),
-            'conteneurs' => Pages\ListConteneurs::route('/conteneurs'),
-            'vehicules'  => Pages\ListVehicules::route('/vehicules'),
+            // 'conteneurs' => Pages\ListConteneurs::route('/conteneurs'),
+            // 'vehicules'  => Pages\ListVehicules::route('/vehicules'),
         ];
     }
 

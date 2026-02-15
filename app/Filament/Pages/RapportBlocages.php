@@ -13,7 +13,7 @@ use App\Filament\Widgets\RapportBlocage;
 
 class RapportBlocages extends Page
 {
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedShieldExclamation;
+    // protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedShieldExclamation;
     protected static string|UnitEnum|null $navigationGroup = 'Rapports';
     protected static ?int $navigationSort = 3;
 
