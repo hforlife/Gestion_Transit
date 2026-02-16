@@ -32,6 +32,11 @@ class ClientResource extends Resource
         return ClientForm::configure($schema);
     }
 
+    public static function getNavigationLabel(): string
+    {
+        return 'Gestion des clients';
+    }
+
     public static function table(Table $table): Table
     {
         return ClientsTable::configure($table);

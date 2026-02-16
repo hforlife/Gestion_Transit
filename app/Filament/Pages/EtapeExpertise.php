@@ -24,6 +24,8 @@ use UnitEnum;
 use Filament\Support\Icons\Heroicon;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\BulkAction;
+use Filament\Tables\Enums\FiltersLayout;
+use Filament\Schemas\Components\Section;
 
 class EtapeExpertise extends Page implements HasTable
 {
@@ -42,6 +44,7 @@ class EtapeExpertise extends Page implements HasTable
     protected static ?int $navigationSort = 4;
 
     protected string $view = 'filament.pages.etape-expertise';
+
 
     public function table(Table $table): Table
     {
@@ -68,24 +71,14 @@ class EtapeExpertise extends Page implements HasTable
                     ->description(fn ($record) => $record->description)
                     ->toggleable(),
 
-                TextColumn::make('etat_colis')
-                    ->label('État')
+                TextColumn::make('typeColis.nom')
+                    ->label('Type')
                     ->badge()
-                    ->formatStateUsing(fn ($state) => match ($state) {
-                        'en_attente' => 'En attente',
-                        'en_transit' => 'En transit',
-                        'livre' => 'Livré',
-                        'retenu' => 'Retenu',
-                        'perdu' => 'Perdu',
-                        default => $state,
-                    })
-                    ->colors([
-                        'warning' => 'en_attente',
-                        'info' => 'en_transit',
-                        'success' => 'livre',
-                        'danger' => 'retenu',
-                        'gray' => 'perdu',
-                    ])
+                    ->color(fn ($record) => 
+                        str_contains(strtolower($record->typeColis?->nom ?? ''), 'véhicules') 
+                            ? 'warning' 
+                            : 'primary'
+                    )
                     ->toggleable(),
 
                 TextColumn::make('client.nom')
@@ -108,17 +101,15 @@ class EtapeExpertise extends Page implements HasTable
                     ->label('État PVC')
                     ->badge()
                     ->formatStateUsing(fn ($state) => match ($state) {
-                        'NON_FOURNI' => 'Non fourni',
-                        'FOURNI' => 'Fourni',
-                        'VALIDE' => 'Validé',
-                        'REJETE' => 'Rejeté',
+                        'NON_RECU' => 'Non reçu',
+                        'RECU' => 'Reçu',
+                        'PAYE' => 'Payé',
                         default => $state ?? 'Non défini',
                     })
                     ->colors([
-                        'danger' => 'NON_FOURNI',
-                        'warning' => 'FOURNI',
-                        'success' => 'VALIDE',
-                        'danger' => 'REJETE',
+                        'danger' => 'NON_RECU',
+                        'warning' => 'RECU',
+                        'success' => 'PAYE',
                     ])
                     ->toggleable(),
 
@@ -135,17 +126,13 @@ class EtapeExpertise extends Page implements HasTable
                     ->label('État AE')
                     ->badge()
                     ->formatStateUsing(fn ($state) => match ($state) {
-                        'NON_FOURNI' => 'Non fourni',
-                        'FOURNI' => 'Fourni',
-                        'VALIDE' => 'Validé',
-                        'REJETE' => 'Rejeté',
+                        'NON_VALIDE' => 'Non valide',
+                        'VALIDE' => 'Valide',
                         default => $state ?? 'Non défini',
                     })
                     ->colors([
-                        'danger' => 'NON_FOURNI',
-                        'warning' => 'FOURNI',
+                        'danger' => 'NON_VALIDE',
                         'success' => 'VALIDE',
-                        'danger' => 'REJETE',
                     ])
                     ->toggleable(),
 
@@ -162,17 +149,13 @@ class EtapeExpertise extends Page implements HasTable
                     ->label('État CMC')
                     ->badge()
                     ->formatStateUsing(fn ($state) => match ($state) {
-                        'NON_FOURNI' => 'Non fourni',
-                        'FOURNI' => 'Fourni',
-                        'VALIDE' => 'Validé',
-                        'REJETE' => 'Rejeté',
+                        'NON_RECU' => 'Non reçu',
+                        'RECU' => 'Reçu',
                         default => $state ?? 'Non défini',
                     })
                     ->colors([
-                        'danger' => 'NON_FOURNI',
-                        'warning' => 'FOURNI',
-                        'success' => 'VALIDE',
-                        'danger' => 'REJETE',
+                        'danger' => 'NON_RECU',
+                        'success' => 'RECU',
                     ])
                     ->toggleable(),
 
@@ -181,49 +164,19 @@ class EtapeExpertise extends Page implements HasTable
                     ->label('État expertise')
                     ->badge()
                     ->formatStateUsing(fn ($state) => match ($state) {
-                        'NON_COMMENCE' => 'Non commencé',
-                        'EN_COURS' => 'En cours',
-                        'EN_ATTENTE_DOCUMENTS' => 'En attente docs',
-                        'EN_ATTENTE_VALIDATION' => 'En attente validation',
-                        'TERMINE' => 'Terminé',
-                        'ANNULE' => 'Annulé',
-                        default => $state ?? 'Non défini',
-                    })
-                    ->colors([
-                        'gray' => 'NON_COMMENCE',
-                        'warning' => 'EN_COURS',
-                        'warning' => 'EN_ATTENTE_DOCUMENTS',
-                        'info' => 'EN_ATTENTE_VALIDATION',
-                        'success' => 'TERMINE',
-                        'danger' => 'ANNULE',
-                    ])
-                    ->icon(fn ($state) => match ($state) {
-                        'NON_COMMENCE' => 'heroicon-o-x-circle',
-                        'EN_COURS' => 'heroicon-o-arrow-path',
-                        'EN_ATTENTE_DOCUMENTS' => 'heroicon-o-document',
-                        'EN_ATTENTE_VALIDATION' => 'heroicon-o-clock',
-                        'TERMINE' => 'heroicon-o-check-circle',
-                        'ANNULE' => 'heroicon-o-no-symbol',
-                        default => 'heroicon-o-question-mark-circle',
-                    })
-                    ->toggleable(),
-
-                TextColumn::make('status')
-                    ->label('Statut final')
-                    ->badge()
-                    ->formatStateUsing(fn ($state) => match ($state) {
                         'EN_ATTENTE' => 'En attente',
-                        'APPROUVE' => 'Approuvé',
-                        'REJETE' => 'Rejeté',
-                        'EN_ATTENTE_CORRECTIONS' => 'En attente corrections',
+                        'EFFECTUEE' => 'Effectuée',
                         default => $state ?? 'Non défini',
                     })
                     ->colors([
                         'warning' => 'EN_ATTENTE',
-                        'success' => 'APPROUVE',
-                        'danger' => 'REJETE',
-                        'info' => 'EN_ATTENTE_CORRECTIONS',
+                        'success' => 'EFFECTUEE',
                     ])
+                    ->icon(fn ($state) => match ($state) {
+                        'EN_ATTENTE' => 'heroicon-o-clock',
+                        'EFFECTUEE' => 'heroicon-o-check-circle',
+                        default => 'heroicon-o-question-mark-circle',
+                    })
                     ->toggleable(),
 
                 IconColumn::make('documents_complets')
@@ -235,10 +188,24 @@ class EtapeExpertise extends Page implements HasTable
                     ->falseColor('danger')
                     ->getStateUsing(fn ($record): bool => 
                         $record->num_pvc && $record->num_ae && $record->num_cmc &&
-                        $record->etat_pvc === 'VALIDE' && 
+                        $record->etat_pvc === 'PAYE' && 
                         $record->etat_ae === 'VALIDE' && 
-                        $record->etat_cmc === 'VALIDE'
+                        $record->etat_cmc === 'RECU'
                     )
+                    ->toggleable(),
+
+                TextColumn::make('status')
+                    ->label('Statut dossier')
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        'EN_COURS' => 'En cours',
+                        'TERMINE' => 'Terminé',
+                        default => $state ?? 'Non défini',
+                    })
+                    ->colors([
+                        'warning' => 'EN_COURS',
+                        'success' => 'TERMINE',
+                    ])
                     ->toggleable(),
 
                 TextColumn::make('created_at')
@@ -251,42 +218,44 @@ class EtapeExpertise extends Page implements HasTable
                 SelectFilter::make('etat_expertise')
                     ->label('État expertise')
                     ->options([
-                        'NON_COMMENCE' => 'Non commencé',
-                        'EN_COURS' => 'En cours',
-                        'EN_ATTENTE_DOCUMENTS' => 'En attente documents',
-                        'EN_ATTENTE_VALIDATION' => 'En attente validation',
-                        'TERMINE' => 'Terminé',
-                        'ANNULE' => 'Annulé',
-                    ])
-                    ->multiple(),
-
-                SelectFilter::make('status')
-                    ->label('Statut final')
-                    ->options([
                         'EN_ATTENTE' => 'En attente',
-                        'APPROUVE' => 'Approuvé',
-                        'REJETE' => 'Rejeté',
-                        'EN_ATTENTE_CORRECTIONS' => 'En attente corrections',
+                        'EFFECTUEE' => 'Effectuée',
                     ])
                     ->multiple(),
 
-                Filter::make('documents_manquants')
-                    ->label('Documents manquants')
-                    ->query(fn (Builder $query): Builder => $query->where(function ($q) {
-                        $q->whereNull('num_pvc')
-                          ->orWhereNull('num_ae')
-                          ->orWhereNull('num_cmc');
-                    }))
-                    ->toggle(),
+                SelectFilter::make('etat_pvc')
+                    ->label('État PVC')
+                    ->options([
+                        'NON_RECU' => 'Non reçu',
+                        'RECU' => 'Reçu',
+                        'PAYE' => 'Payé',
+                    ])
+                    ->multiple(),
 
-                Filter::make('documents_incomplets')
-                    ->label('Documents incomplets')
-                    ->query(fn (Builder $query): Builder => $query->where(function ($q) {
-                        $q->where('etat_pvc', '!=', 'VALIDE')
-                          ->orWhere('etat_ae', '!=', 'VALIDE')
-                          ->orWhere('etat_cmc', '!=', 'VALIDE');
-                    }))
-                    ->toggle(),
+                SelectFilter::make('etat_ae')
+                    ->label('État AE')
+                    ->options([
+                        'NON_VALIDE' => 'Non valide',
+                        'VALIDE' => 'Valide',
+                    ])
+                    ->multiple(),
+
+                SelectFilter::make('etat_cmc')
+                    ->label('État CMC')
+                    ->options([
+                        'NON_RECU' => 'Non reçu',
+                        'RECU' => 'Reçu',
+                    ])
+                    ->multiple(),
+
+                // Filter::make('documents_manquants')
+                //     ->label('Documents manquants')
+                //     ->query(fn (Builder $query): Builder => $query->where(function ($q) {
+                //         $q->whereNull('num_pvc')
+                //           ->orWhereNull('num_ae')
+                //           ->orWhereNull('num_cmc');
+                //     }))
+                //     ->toggle(),
 
                 SelectFilter::make('client_id')
                     ->label('Client')
@@ -294,13 +263,14 @@ class EtapeExpertise extends Page implements HasTable
                     ->searchable()
                     ->preload()
                     ->multiple(),
-            ])
+            ], layout: FiltersLayout::AboveContent)
             ->actions([
                 Action::make('voir')
-                    ->label('Détails')
+                    ->label('Détails complets')
                     ->icon('heroicon-o-eye')
-                    ->url(fn (Colis $record): string => route('filament.admin.resources.colis.edit', $record))
-                    ->color('info'),
+                    ->url(fn (Colis $record): string => \App\Filament\Resources\Colis\ColisResource::getUrl('view', ['record' => $record]))
+                    ->color('info')
+                    ->openUrlInNewTab(false),
 
                 Action::make('gerer_expertise')
                     ->label('Gérer expertise')
@@ -318,7 +288,6 @@ class EtapeExpertise extends Page implements HasTable
                             'status' => $data['status'] ?? $record->status,
                         ]);
 
-                        // Log de l'action
                         activity()
                             ->performedOn($record)
                             ->causedBy(auth()->user())
@@ -328,99 +297,88 @@ class EtapeExpertise extends Page implements HasTable
                     ->form([
                         Grid::make(3)->schema([
                             // Section PVC
-                            Grid::make(1)->schema([
-                                TextInput::make('num_pvc')
-                                    ->label('N° PVC')
-                                    ->placeholder('Ex: PVC-2024-001')
-                                    ->prefix('PVC')
-                                    ->maxLength(50)
-                                    ->columnSpanFull(),
+                            Section::make('PVC')
+                                ->compact()
+                                ->schema([
+                                    TextInput::make('num_pvc')
+                                        ->label('N° PVC')
+                                        ->placeholder('Ex: PVC-2024-001')
+                                        ->prefix('PVC')
+                                        ->maxLength(50),
 
-                                Select::make('etat_pvc')
-                                    ->label('État PVC')
-                                    ->options([
-                                        'NON_FOURNI' => 'Non fourni',
-                                        'FOURNI' => 'Fourni',
-                                        'VALIDE' => 'Validé',
-                                        'REJETE' => 'Rejeté',
-                                    ])
-                                    ->native(false)
-                                    ->columnSpanFull(),
-                            ])->columnSpan(1),
+                                    Select::make('etat_pvc')
+                                        ->label('État')
+                                        ->options([
+                                            'NON_RECU' => 'Non reçu',
+                                            'RECU' => 'Reçu',
+                                            'PAYE' => 'Payé',
+                                        ])
+                                        ->native(false),
+                                ])->columnSpan(1),
 
                             // Section AE
-                            Grid::make(1)->schema([
-                                TextInput::make('num_ae')
-                                    ->label('N° AE')
-                                    ->placeholder('Ex: AE-2024-001')
-                                    ->prefix('AE')
-                                    ->maxLength(50)
-                                    ->columnSpanFull(),
+                            Section::make('AE')
+                                ->compact()
+                                ->schema([
+                                    TextInput::make('num_ae')
+                                        ->label('N° AE')
+                                        ->placeholder('Ex: AE-2024-001')
+                                        ->prefix('AE')
+                                        ->maxLength(50),
 
-                                Select::make('etat_ae')
-                                    ->label('État AE')
-                                    ->options([
-                                        'NON_FOURNI' => 'Non fourni',
-                                        'FOURNI' => 'Fourni',
-                                        'VALIDE' => 'Validé',
-                                        'REJETE' => 'Rejeté',
-                                    ])
-                                    ->native(false)
-                                    ->columnSpanFull(),
-                            ])->columnSpan(1),
+                                    Select::make('etat_ae')
+                                        ->label('État')
+                                        ->options([
+                                            'NON_VALIDE' => 'Non valide',
+                                            'VALIDE' => 'Valide',
+                                        ])
+                                        ->native(false),
+                                ])->columnSpan(1),
 
                             // Section CMC
-                            Grid::make(1)->schema([
-                                TextInput::make('num_cmc')
-                                    ->label('N° CMC')
-                                    ->placeholder('Ex: CMC-2024-001')
-                                    ->prefix('CMC')
-                                    ->maxLength(50)
-                                    ->columnSpanFull(),
+                            Section::make('CMC')
+                                ->compact()
+                                ->schema([
+                                    TextInput::make('num_cmc')
+                                        ->label('N° CMC')
+                                        ->placeholder('Ex: CMC-2024-001')
+                                        ->prefix('CMC')
+                                        ->maxLength(50),
 
-                                Select::make('etat_cmc')
-                                    ->label('État CMC')
-                                    ->options([
-                                        'NON_FOURNI' => 'Non fourni',
-                                        'FOURNI' => 'Fourni',
-                                        'VALIDE' => 'Validé',
-                                        'REJETE' => 'Rejeté',
-                                    ])
-                                    ->native(false)
-                                    ->columnSpanFull(),
-                            ])->columnSpan(1),
+                                    Select::make('etat_cmc')
+                                        ->label('État')
+                                        ->options([
+                                            'NON_RECU' => 'Non reçu',
+                                            'RECU' => 'Reçu',
+                                        ])
+                                        ->native(false),
+                                ])->columnSpan(1),
                         ]),
 
                         Grid::make(2)->schema([
                             Select::make('etat_expertise')
                                 ->label('État de l\'expertise')
                                 ->options([
-                                    'NON_COMMENCE' => 'Non commencé',
-                                    'EN_COURS' => 'En cours',
-                                    'EN_ATTENTE_DOCUMENTS' => 'En attente documents',
-                                    'EN_ATTENTE_VALIDATION' => 'En attente validation',
-                                    'TERMINE' => 'Terminé',
-                                    'ANNULE' => 'Annulé',
+                                    'EN_ATTENTE' => 'En attente',
+                                    'EFFECTUEE' => 'Effectuée',
                                 ])
                                 ->required()
                                 ->native(false),
 
-                            Select::make('status')
-                                ->label('Statut final')
-                                ->options([
-                                    'EN_ATTENTE' => 'En attente',
-                                    'APPROUVE' => 'Approuvé',
-                                    'REJETE' => 'Rejeté',
-                                    'EN_ATTENTE_CORRECTIONS' => 'En attente corrections',
-                                ])
-                                ->native(false),
+                            // Select::make('status')
+                            //     ->label('Statut dossier')
+                            //     ->options([
+                            //         'EN_COURS' => 'En cours',
+                            //         'TERMINE' => 'Terminé',
+                            //     ])
+                            //     ->native(false),
                         ]),
 
-                        Textarea::make('commentaire_expertise')
-                            ->label('Commentaire')
-                            ->placeholder('Ajouter des observations sur l\'expertise...')
-                            ->rows(3)
-                            ->columnSpanFull(),
+                        // Textarea::make('commentaire_expertise')
+                        //     ->label('Commentaire')
+                        //     ->placeholder('Ajouter des observations sur l\'expertise...')
+                        //     ->rows(3)
+                        //     ->columnSpanFull(),
                     ])
                     ->modalHeading('Gestion de l\'expertise')
                     ->modalButton('Enregistrer')
@@ -434,31 +392,24 @@ class EtapeExpertise extends Page implements HasTable
                         $record->num_pvc || $record->num_ae || $record->num_cmc
                     )
                     ->action(function (Colis $record) {
-                        if ($record->num_pvc) $record->update(['etat_pvc' => 'VALIDE']);
+                        if ($record->num_pvc) $record->update(['etat_pvc' => 'PAYE']);
                         if ($record->num_ae) $record->update(['etat_ae' => 'VALIDE']);
-                        if ($record->num_cmc) $record->update(['etat_cmc' => 'VALIDE']);
+                        if ($record->num_cmc) $record->update(['etat_cmc' => 'RECU']);
                         
                         // Vérifier si tous les documents sont validés
-                        if ($record->etat_pvc === 'VALIDE' && 
+                        if ($record->etat_pvc === 'PAYE' && 
                             $record->etat_ae === 'VALIDE' && 
-                            $record->etat_cmc === 'VALIDE') {
-                            $record->update(['etat_expertise' => 'TERMINE']);
+                            $record->etat_cmc === 'RECU') {
+                            $record->update([
+                                'etat_expertise' => 'EFFECTUEE',
+                                'status' => 'TERMINE'
+                            ]);
                         }
                     })
                     ->requiresConfirmation()
                     ->modalHeading('Valider les documents')
                     ->modalDescription('Êtes-vous sûr de vouloir valider tous les documents ?')
                     ->modalSubmitActionLabel('Oui, valider'),
-
-                Action::make('documents')
-                    ->label('Documents')
-                    ->icon('heroicon-o-document-duplicate')
-                    ->color('gray')
-                    ->url(fn (Colis $record): string => route('filament.admin.resources.documents.index', [
-                        'colis_id' => $record->id,
-                        'type' => 'expertise'
-                    ]))
-                    ->openUrlInNewTab(),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
@@ -467,9 +418,18 @@ class EtapeExpertise extends Page implements HasTable
                         ->icon('heroicon-o-check-circle')
                         ->action(function ($records) {
                             foreach ($records as $record) {
-                                if ($record->num_pvc) $record->update(['etat_pvc' => 'VALIDE']);
+                                if ($record->num_pvc) $record->update(['etat_pvc' => 'PAYE']);
                                 if ($record->num_ae) $record->update(['etat_ae' => 'VALIDE']);
-                                if ($record->num_cmc) $record->update(['etat_cmc' => 'VALIDE']);
+                                if ($record->num_cmc) $record->update(['etat_cmc' => 'RECU']);
+                                
+                                if ($record->etat_pvc === 'PAYE' && 
+                                    $record->etat_ae === 'VALIDE' && 
+                                    $record->etat_cmc === 'RECU') {
+                                    $record->update([
+                                        'etat_expertise' => 'EFFECTUEE',
+                                        'status' => 'TERMINE'
+                                    ]);
+                                }
                             }
                         })
                         ->requiresConfirmation()
@@ -478,7 +438,10 @@ class EtapeExpertise extends Page implements HasTable
                     BulkAction::make('marquer_termine')
                         ->label('Marquer terminé')
                         ->icon('heroicon-o-check-badge')
-                        ->action(fn ($records) => $records->each->update(['etat_expertise' => 'TERMINE']))
+                        ->action(fn ($records) => $records->each->update([
+                            'etat_expertise' => 'EFFECTUEE',
+                            'status' => 'TERMINE'
+                        ]))
                         ->requiresConfirmation(),
                 ]),
             ])
@@ -489,18 +452,19 @@ class EtapeExpertise extends Page implements HasTable
     public static function getNavigationBadge(): ?string
     {
         return (string) Colis::query()
-            ->where(function ($query) {
-                $query->where('etat_expertise', 'EN_COURS')
-                      ->orWhere('etat_expertise', 'EN_ATTENTE_DOCUMENTS')
-                      ->orWhere('etat_expertise', 'EN_ATTENTE_VALIDATION');
-            })
+            ->where('etat_expertise', 'EN_ATTENTE')
             ->count();
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return '3 - Etape Expertise';
     }
 
     public static function getNavigationBadgeColor(): ?string
     {
         $count = Colis::query()
-            ->where('etat_expertise', 'EN_COURS')
+            ->where('etat_expertise', 'EN_ATTENTE')
             ->count();
 
         return match (true) {

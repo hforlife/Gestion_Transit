@@ -37,6 +37,11 @@ class PortResource extends Resource
         return PortsTable::configure($table);
     }
 
+    public static function getNavigationLabel(): string
+    {
+        return 'Gestion des ports';
+    }
+
     public static function getRelations(): array
     {
         return [

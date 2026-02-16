@@ -19,41 +19,13 @@
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">En préparation</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">En attente</p>
                         <p class="text-2xl font-bold text-gray-600 dark:text-gray-400">
-                            {{ \App\Models\Colis::where('status_colis_livraison', 'EN_PREPARATION')->count() }}
+                            {{ \App\Models\Colis::where('status_colis_livraison', 'EN_ATTENTE')->count() }}
                         </p>
                     </div>
                     <div class="p-3 bg-gray-100 dark:bg-gray-700 rounded-full">
                         <x-filament::icon icon="heroicon-o-cube" class="w-6 h-6 text-gray-600 dark:text-gray-400" />
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Prêts</p>
-                        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                            {{ \App\Models\Colis::where('status_colis_livraison', 'PRET')->count() }}
-                        </p>
-                    </div>
-                    <div class="p-3 bg-blue-100 dark:bg-blue-500/10 rounded-full">
-                        <x-filament::icon icon="heroicon-o-check-badge" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">En cours</p>
-                        <p class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                            {{ \App\Models\Colis::where('status_colis_livraison', 'EN_COURS_LIVRAISON')->count() }}
-                        </p>
-                    </div>
-                    <div class="p-3 bg-yellow-100 dark:bg-yellow-500/10 rounded-full">
-                        <x-filament::icon icon="heroicon-o-truck" class="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
                     </div>
                 </div>
             </div>
@@ -102,7 +74,7 @@
                 <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Livraisons du jour</h3>
                 @php
                     $aujourdhui = \App\Models\Colis::whereDate('date_livraison', today())->count();
-                    $prevu = \App\Models\Colis::where('status_colis_livraison', 'EN_COURS_LIVRAISON')->count();
+                    $prevu = \App\Models\Colis::where('status_colis_livraison', 'EN_ATTENTE')->count();
                 @endphp
                 <div class="space-y-2">
                     <div class="flex justify-between text-sm">
@@ -110,13 +82,13 @@
                         <span class="font-medium text-gray-900 dark:text-white">{{ $aujourdhui }}</span>
                     </div>
                     <div class="flex justify-between text-sm">
-                        <span class="text-gray-500">En cours</span>
+                        <span class="text-gray-500">En attente</span>
                         <span class="font-medium text-yellow-600">{{ $prevu }}</span>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+            {{-- <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
                 <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Problèmes</h3>
                 @php
                     $echecs = \App\Models\Colis::where('status_colis_livraison', 'ECHEC')->count();
@@ -134,11 +106,11 @@
                         <span class="font-medium text-orange-600">{{ $retards }}</span>
                     </div>
                 </div>
-            </div>
+            </div> --}}
         </div>
 
         <!-- Alertes -->
-        @php
+        {{-- @php
             $echecsRecents = \App\Models\Colis::where('status_colis_livraison', 'ECHEC')
                 ->where('updated_at', '>', now()->subDays(2))
                 ->count();
@@ -160,10 +132,10 @@
                     </div>
                 </div>
             </div>
-        @endif
+        @endif --}}
 
         <!-- Filtres rapides -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+        {{-- <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Filtres rapides</h3>
                 <span class="text-xs text-gray-500 dark:text-gray-400">Cliquez pour filtrer</span>
@@ -218,7 +190,7 @@
                     Réinitialiser
                 </button>
             </div>
-        </div>
+        </div> --}}
 
         <!-- Tableau des colis -->
         {{ $this->table }}

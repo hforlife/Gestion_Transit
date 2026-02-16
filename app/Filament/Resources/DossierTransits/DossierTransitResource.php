@@ -32,6 +32,11 @@ class DossierTransitResource extends Resource
         return DossierTransitForm::configure($schema);
     }
 
+    public static function getNavigationLabel(): string
+    {
+        return 'Gestion des dossiers';
+    }
+
     public static function table(Table $table): Table
     {
         return DossierTransitsTable::configure($table);

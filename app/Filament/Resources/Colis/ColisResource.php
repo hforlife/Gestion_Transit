@@ -35,6 +35,11 @@ class ColisResource extends Resource
         return ColisForm::configure($schema);
     }
 
+        public static function getNavigationLabel(): string
+    {
+        return 'Gestion des colis';
+    }
+
     public static function table(Table $table): Table
     {
         return ColisTable::configure($table);
@@ -53,8 +58,7 @@ class ColisResource extends Resource
             'index' => ListColis::route('/'),
             'create' => CreateColis::route('/create'),
             'edit' => EditColis::route('/{record}/edit'),
-            // 'conteneurs' => Pages\ListConteneurs::route('/conteneurs'),
-            // 'vehicules'  => Pages\ListVehicules::route('/vehicules'),
+            'view' => Pages\ViewColis::route('/{record}'),
         ];
     }
 

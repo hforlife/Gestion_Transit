@@ -213,11 +213,7 @@ class ColisTable
                 /* ===============================
                  |  VIEW ACTION
                  ===============================*/
-                ViewAction::make('view')
-                    ->label('Voir')
-                    ->modalHeading(fn ($record) => "Détails du colis N° {$record->numero_bl}")
-                    // ->modalContent(fn ($record) => view('filament.colis.view', ['colis' => $record])) // Blade personnalisé
-                    ->icon('heroicon-o-eye'),
+                ViewAction::make('view'),
 
                 /* ===============================
                  |  EDIT ACTION

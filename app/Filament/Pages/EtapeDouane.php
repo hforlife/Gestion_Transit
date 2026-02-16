@@ -64,25 +64,6 @@ class EtapeDouane extends Page implements HasTable
                     ->color('primary')
                     ->description(fn ($record) => $record->description),
 
-                TextColumn::make('etat_colis')
-                    ->label('État')
-                    ->badge()
-                    ->formatStateUsing(fn ($state) => match ($state) {
-                        'en_attente' => 'En attente',
-                        'en_transit' => 'En transit',
-                        'livre' => 'Livré',
-                        'retenu' => 'Retenu',
-                        'perdu' => 'Perdu',
-                        default => $state,
-                    })
-                    ->colors([
-                        'warning' => 'en_attente',
-                        'info' => 'en_transit',
-                        'success' => 'livre',
-                        'danger' => 'retenu',
-                        'gray' => 'perdu',
-                    ]),
-
                 TextColumn::make('typeColis.nom')
                     ->label('Type')
                     ->sortable()
@@ -158,19 +139,13 @@ class EtapeDouane extends Page implements HasTable
                     })
                     ->colors([
                         'warning' => 'EN_ATTENTE',
-                        'info' => 'EN_COURS',
                         'primary' => 'ENTRE',
                         'success' => 'SORTI',
-                        'danger' => 'BLOQUE',
-                        'danger' => 'REFUSE',
                     ])
                     ->icon(fn ($state) => match ($state) {
                         'EN_ATTENTE' => 'heroicon-o-clock',
-                        'EN_COURS' => 'heroicon-o-arrow-path',
                         'ENTRE' => 'heroicon-o-arrow-left-circle',
                         'SORTI' => 'heroicon-o-check-circle',
-                        'BLOQUE' => 'heroicon-o-exclamation-circle',
-                        'REFUSE' => 'heroicon-o-x-circle',
                         default => 'heroicon-o-question-mark-circle',
                     })
                     ->toggleable(),
@@ -202,21 +177,16 @@ class EtapeDouane extends Page implements HasTable
                     ->label('Statut Douane')
                     ->options([
                         'EN_ATTENTE' => 'En attente',
-                        'EN_COURS' => 'En cours',
                         'ENTRE' => 'Entré',
                         'SORTI' => 'Sorti',
-                        'BLOQUE' => 'Bloqué',
-                        'REFUSE' => 'Refusé',
                     ])
                     ->multiple(),
 
                 SelectFilter::make('etat_t1')
                     ->label('État T1')
                     ->options([
-                        'NON_FOURNI' => 'Non fourni',
                         'FOURNI' => 'Fourni',
                         'PAYE' => 'Payé',
-                        'ANNULE' => 'Annulé',
                     ])
                     ->multiple(),
 
@@ -289,10 +259,11 @@ class EtapeDouane extends Page implements HasTable
             ])
             ->actions([
                 Action::make('voir')
-                    ->label('Détails')
+                    ->label('Détails complets')
                     ->icon('heroicon-o-eye')
-                    ->url(fn (Colis $record): string => route('filament.admin.resources.colis.edit', $record))
-                    ->color('info'),
+                    ->url(fn (Colis $record): string => \App\Filament\Resources\Colis\ColisResource::getUrl('view', ['record' => $record]))
+                    ->color('info')
+                    ->openUrlInNewTab(false),
 
                 Action::make('mettre_a_jour_douane')
                     ->label('Mise à jour')
@@ -326,10 +297,8 @@ class EtapeDouane extends Page implements HasTable
                             Select::make('etat_t1')
                                 ->label('État T1')
                                 ->options([
-                                    'NON_FOURNI' => 'Non fourni',
                                     'FOURNI' => 'Fourni',
                                     'PAYE' => 'Payé',
-                                    'ANNULE' => 'Annulé',
                                 ]),
 
                             TextInput::make('declaration_reference')
@@ -342,11 +311,8 @@ class EtapeDouane extends Page implements HasTable
                                 ->label('Statut douane')
                                 ->options([
                                     'EN_ATTENTE' => 'En attente',
-                                    'EN_COURS' => 'En cours',
                                     'ENTRE' => 'Entré',
                                     'SORTI' => 'Sorti',
-                                    'BLOQUE' => 'Bloqué',
-                                    'REFUSE' => 'Refusé',
                                 ])
                                 ->required()
                                 ->columnSpanFull(),
@@ -369,25 +335,6 @@ class EtapeDouane extends Page implements HasTable
                     ->modalButton('Enregistrer')
                     ->modalWidth('xl'),
 
-                Action::make('documents')
-                    ->label('Documents')
-                    ->icon('heroicon-o-document-duplicate')
-                    ->color('gray')
-                    ->url(fn (Colis $record): string => route('filament.admin.resources.documents.index', ['colis_id' => $record->id]))
-                    ->openUrlInNewTab(),
-
-                // Action::make('alerte')
-                //     ->label('Alerte')
-                //     ->icon('heroicon-o-exclamation-triangle')
-                //     ->color('danger')
-                //     ->visible(fn (Colis $record): bool => 
-                //         $record->status_colis_douane === 'BLOQUE' || 
-                //         ($record->date_entree_douane && $record->date_entree_douane->diffInDays(now()) > 7)
-                //     )
-                //     ->action(function (Colis $record) {
-                //         // Envoyer une notification
-                //         // Logique d'alerte
-                //     }),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
@@ -415,10 +362,14 @@ class EtapeDouane extends Page implements HasTable
         return (string) Colis::query()
             ->where(function ($query) {
                 $query->where('status_colis_douane', 'EN_ATTENTE')
-                      ->orWhere('status_colis_douane', 'EN_COURS')
                       ->orWhere('status_colis_douane', 'ENTRE');
             })
             ->count();
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return '2 - Etape Douane';
     }
 
     public static function getNavigationBadgeColor(): ?string
@@ -426,7 +377,6 @@ class EtapeDouane extends Page implements HasTable
         $count = Colis::query()
             ->where(function ($query) {
                 $query->where('status_colis_douane', 'EN_ATTENTE')
-                      ->orWhere('status_colis_douane', 'EN_COURS')
                       ->orWhere('status_colis_douane', 'ENTRE');
             })
             ->count();
@@ -436,5 +386,26 @@ class EtapeDouane extends Page implements HasTable
             $count > 10 => 'warning',
             default => 'success',
         };
+    }
+
+        public function getTabs(): array
+    {
+        return [
+            'all' => Tab::make('Tous'),
+
+            'conteneur' => Tab::make('Conteneurs')
+                ->modifyQueryUsing(fn (Builder $query) =>
+                    $query->whereHas('typeColis', fn ($q) =>
+                        $q->where('nom', 'Conteneur')
+                    )
+                ),
+
+            'vehicule' => Tab::make('Véhicules')
+                ->modifyQueryUsing(fn (Builder $query) =>
+                    $query->whereHas('typeColis', fn ($q) =>
+                        $q->where('nom', 'Véhicules')
+                    )
+                ),
+        ];
     }
 }

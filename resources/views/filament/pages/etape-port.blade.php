@@ -33,9 +33,9 @@
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">En cours</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Entrée</p>
                         <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                            {{ \App\Models\Colis::whereHas('port')->whereIn('status_colis_port', ['EN_COURS', 'CHARGEMENT', 'DECHARGEMENT'])->count() }}
+                            {{ \App\Models\Colis::whereHas('port')->whereIn('status_colis_port', ['ENTRE'])->count() }}
                         </p>
                     </div>
                     <div class="p-3 bg-blue-100 dark:bg-blue-500/10 rounded-full">
@@ -59,7 +59,7 @@
             </div>
         </div>
 
-        <!-- Filtres rapides -->
+        {{-- <!-- Filtres rapides -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Filtres rapides</h3>
@@ -84,7 +84,7 @@
                     Réinitialiser
                 </button>
             </div>
-        </div>
+        </div> --}}
 
         <!-- Tableau des colis -->
         {{ $this->table }}

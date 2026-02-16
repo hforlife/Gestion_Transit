@@ -33,9 +33,9 @@
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">En cours</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Entrée</p>
                         <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                            {{ \App\Models\Colis::whereIn('status_colis_douane', ['EN_COURS', 'ENTRE'])->count() }}
+                            {{ \App\Models\Colis::whereIn('status_colis_douane', ['ENTRE'])->count() }}
                         </p>
                     </div>
                     <div class="p-3 bg-blue-100 dark:bg-blue-500/10 rounded-full">
@@ -75,7 +75,7 @@
 
         <!-- Alertes et notifications -->
         @php
-            $bloques = \App\Models\Colis::where('status_colis_douane', 'BLOQUE')->count();
+            $bloques = \App\Models\Colis::where('status_colis_douane', 'ENTRE')->count();
             $retards = \App\Models\Colis::whereNotNull('date_entree_douane')
                 ->whereNull('date_sortie_douane')
                 ->where('date_entree_douane', '<', now()->subDays(7))
@@ -89,7 +89,7 @@
                     <div>
                         <h3 class="text-sm font-medium text-red-800 dark:text-red-300">Alertes douane</h3>
                         <p class="text-sm text-red-700 dark:text-red-400">
-                            @if($bloques > 0) {{ $bloques }} colis bloqués en douane. @endif
+                            @if($bloques > 0) {{ $bloques }} colis entré en douane. @endif
                             @if($retards > 0) {{ $retards }} colis en retard de sortie (>7 jours). @endif
                         </p>
                     </div>
@@ -97,7 +97,7 @@
             </div>
         @endif
 
-        <!-- Filtres rapides -->
+        {{-- <!-- Filtres rapides -->
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Filtres rapides</h3>
@@ -141,7 +141,7 @@
                     Réinitialiser
                 </button>
             </div>
-        </div>
+        </div> --}}
 
         <!-- Tableau des colis -->
         {{ $this->table }}

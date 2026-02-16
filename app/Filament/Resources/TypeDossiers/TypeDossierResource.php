@@ -32,6 +32,11 @@ class TypeDossierResource extends Resource
         return TypeDossierForm::configure($schema);
     }
 
+    public static function getNavigationLabel(): string
+    {
+        return 'Gestion des types de dossiers';
+    }
+
     public static function table(Table $table): Table
     {
         return TypeDossiersTable::configure($table);

@@ -65,25 +65,6 @@ class EtapeLivraison extends Page implements HasTable
                     ->description(fn ($record) => $record->description)
                     ->toggleable(),
 
-                BadgeColumn::make('etat_colis')
-                    ->label('État')
-                    ->formatStateUsing(fn ($state) => match ($state) {
-                        'en_attente' => 'En attente',
-                        'en_transit' => 'En transit',
-                        'livre' => 'Livré',
-                        'retenu' => 'Retenu',
-                        'perdu' => 'Perdu',
-                        default => $state,
-                    })
-                    ->colors([
-                        'warning' => 'en_attente',
-                        'info' => 'en_transit',
-                        'success' => 'livre',
-                        'danger' => 'retenu',
-                        'gray' => 'perdu',
-                    ])
-                    ->toggleable(),
-
                 TextColumn::make('client.nom')
                     ->label('Client')
                     ->sortable()
@@ -94,32 +75,17 @@ class EtapeLivraison extends Page implements HasTable
                 BadgeColumn::make('status_colis_livraison')
                     ->label('Statut livraison')
                     ->formatStateUsing(fn ($state) => match ($state) {
-                        'EN_PREPARATION' => 'En préparation',
-                        'PRET' => 'Prêt',
-                        'EN_COURS_LIVRAISON' => 'En cours de livraison',
+                        'EN_ATTENTE' => 'En attente',
                         'LIVRE' => 'Livré',
-                        'ECHEC' => 'Échec',
-                        'REPORTE' => 'Reporté',
-                        'ANNULE' => 'Annulé',
                         default => $state ?? 'Non défini',
                     })
                     ->colors([
-                        'gray' => 'EN_PREPARATION',
-                        'info' => 'PRET',
-                        'warning' => 'EN_COURS_LIVRAISON',
+                        'gray' => 'EN_ATTENTE',
                         'success' => 'LIVRE',
-                        'danger' => 'ECHEC',
-                        'warning' => 'REPORTE',
-                        'danger' => 'ANNULE',
                     ])
                     ->icon(fn ($state) => match ($state) {
-                        'EN_PREPARATION' => 'heroicon-o-cube',
-                        'PRET' => 'heroicon-o-check-badge',
-                        'EN_COURS_LIVRAISON' => 'heroicon-o-truck',
+                        'EN_ATTENTE' => 'heroicon-o-cube',
                         'LIVRE' => 'heroicon-o-check-circle',
-                        'ECHEC' => 'heroicon-o-x-circle',
-                        'REPORTE' => 'heroicon-o-calendar',
-                        'ANNULE' => 'heroicon-o-no-symbol',
                         default => 'heroicon-o-question-mark-circle',
                     })
                     ->toggleable(),
@@ -153,23 +119,23 @@ class EtapeLivraison extends Page implements HasTable
                     ->toggleable(),
 
                 // Délai de livraison
-                TextColumn::make('delai_livraison')
-                    ->label('Délai')
-                    ->formatStateUsing(function ($record) {
-                        if (!$record->created_at || !$record->date_livraison) {
-                            return 'N/A';
-                        }
+                // TextColumn::make('delai_livraison')
+                //     ->label('Délai')
+                //     ->formatStateUsing(function ($record) {
+                //         if (!$record->created_at || !$record->date_livraison) {
+                //             return 'N/A';
+                //         }
                         
-                        $jours = $record->created_at->diffInDays($record->date_livraison);
-                        return $jours . ' jour' . ($jours > 1 ? 's' : '');
-                    })
-                    ->badge()
-                    ->color(fn ($record) => 
-                        $record->created_at && $record->date_livraison
-                            ? ($record->created_at->diffInDays($record->date_livraison) > 7 ? 'danger' : 'success')
-                            : 'gray'
-                    )
-                    ->toggleable(),
+                //         $jours = $record->created_at->diffInDays($record->date_livraison);
+                //         return $jours . ' jour' . ($jours > 1 ? 's' : '');
+                //     })
+                //     ->badge()
+                //     ->color(fn ($record) => 
+                //         $record->created_at && $record->date_livraison
+                //             ? ($record->created_at->diffInDays($record->date_livraison) > 7 ? 'danger' : 'success')
+                //             : 'gray'
+                //     )
+                //     ->toggleable(),
 
                 TextColumn::make('created_at')
                     ->label('Créé le')
@@ -181,13 +147,8 @@ class EtapeLivraison extends Page implements HasTable
                 SelectFilter::make('status_colis_livraison')
                     ->label('Statut livraison')
                     ->options([
-                        'EN_PREPARATION' => 'En préparation',
-                        'PRET' => 'Prêt',
-                        'EN_COURS_LIVRAISON' => 'En cours de livraison',
+                        'EN_ATTENTE' => 'En attente',
                         'LIVRE' => 'Livré',
-                        'ECHEC' => 'Échec',
-                        'REPORTE' => 'Reporté',
-                        'ANNULE' => 'Annulé',
                     ])
                     ->multiple(),
 
@@ -240,7 +201,7 @@ class EtapeLivraison extends Page implements HasTable
                 Action::make('voir')
                     ->label('Détails')
                     ->icon('heroicon-o-eye')
-                    ->url(fn (Colis $record): string => route('filament.admin.resources.colis.edit', $record))
+                    ->url(fn (Colis $record): string => \App\Filament\Resources\Colis\ColisResource::getUrl('view', ['record' => $record]))
                     ->color('info'),
 
                 Action::make('gerer_livraison')
@@ -271,13 +232,8 @@ class EtapeLivraison extends Page implements HasTable
                             Select::make('status_colis_livraison')
                                 ->label('Statut livraison')
                                 ->options([
-                                    'EN_PREPARATION' => 'En préparation',
-                                    'PRET' => 'Prêt',
-                                    'EN_COURS_LIVRAISON' => 'En cours de livraison',
+                                    'EN_ATTENTE' => 'En préparation',
                                     'LIVRE' => 'Livré',
-                                    'ECHEC' => 'Échec',
-                                    'REPORTE' => 'Reporté',
-                                    'ANNULE' => 'Annulé',
                                 ])
                                 ->required()
                                 ->native(false)
@@ -323,43 +279,43 @@ class EtapeLivraison extends Page implements HasTable
                     ->modalDescription('Êtes-vous sûr de vouloir marquer ce colis comme livré ?')
                     ->modalSubmitActionLabel('Oui, marquer livré'),
 
-                Action::make('signature')
-                    ->label('Signature')
-                    ->icon('heroicon-o-pencil')
-                    ->color('gray')
-                    ->visible(fn (Colis $record): bool => $record->status_colis_livraison === 'LIVRE')
-                    ->action(function (Colis $record, array $data) {
-                        // Logique pour enregistrer la signature
-                        $record->update(['signature' => $data['signature']]);
-                    })
-                    ->form([
-                        Textarea::make('signature')
-                            ->label('Signature du destinataire')
-                            ->placeholder('Nom et signature du destinataire...')
-                            ->required()
-                            ->rows(3),
-                    ])
-                    ->modalHeading('Signature de livraison')
-                    ->modalButton('Enregistrer'),
+                // Action::make('signature')
+                //     ->label('Signature')
+                //     ->icon('heroicon-o-pencil')
+                //     ->color('gray')
+                //     ->visible(fn (Colis $record): bool => $record->status_colis_livraison === 'LIVRE')
+                //     ->action(function (Colis $record, array $data) {
+                //         // Logique pour enregistrer la signature
+                //         $record->update(['signature' => $data['signature']]);
+                //     })
+                //     ->form([
+                //         Textarea::make('signature')
+                //             ->label('Signature du destinataire')
+                //             ->placeholder('Nom et signature du destinataire...')
+                //             ->required()
+                //             ->rows(3),
+                //     ])
+                //     ->modalHeading('Signature de livraison')
+                //     ->modalButton('Enregistrer'),
 
-                Action::make('documents')
-                    ->label('Documents')
-                    ->icon('heroicon-o-document-duplicate')
-                    ->color('gray')
-                    ->url(fn (Colis $record): string => route('filament.admin.resources.documents.index', [
-                        'colis_id' => $record->id,
-                        'type' => 'livraison'
-                    ]))
-                    ->openUrlInNewTab(),
+                // Action::make('documents')
+                //     ->label('Documents')
+                //     ->icon('heroicon-o-document-duplicate')
+                //     ->color('gray')
+                //     ->url(fn (Colis $record): string => route('filament.admin.resources.documents.index', [
+                //         'colis_id' => $record->id,
+                //         'type' => 'livraison'
+                //     ]))
+                //     ->openUrlInNewTab(),
 
-                Action::make('bon_livraison')
-                    ->label('Bon de livraison')
-                    ->icon('heroicon-o-document-arrow-down')
-                    ->color('gray')
-                    ->action(function (Colis $record) {
-                        // Générer PDF du bon de livraison
-                        return redirect()->route('colis.bon-livraison', $record);
-                    }),
+                // Action::make('bon_livraison')
+                //     ->label('Bon de livraison')
+                //     ->icon('heroicon-o-document-arrow-down')
+                //     ->color('gray')
+                //     ->action(function (Colis $record) {
+                //         // Générer PDF du bon de livraison
+                //         return redirect()->route('colis.bon-livraison', $record);
+                //     }),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
@@ -393,14 +349,19 @@ class EtapeLivraison extends Page implements HasTable
     public static function getNavigationBadge(): ?string
     {
         return (string) Colis::query()
-            ->where('status_colis_livraison', 'EN_COURS_LIVRAISON')
+            ->where('status_colis_livraison', 'EN_ATTENTE')
             ->count();
+    }
+
+        public static function getNavigationLabel(): string
+    {
+        return '4 - Etape Livraison';
     }
 
     public static function getNavigationBadgeColor(): ?string
     {
         $count = Colis::query()
-            ->where('status_colis_livraison', 'EN_COURS_LIVRAISON')
+            ->where('status_colis_livraison', 'EN_ATTENTE')
             ->count();
 
         return match (true) {

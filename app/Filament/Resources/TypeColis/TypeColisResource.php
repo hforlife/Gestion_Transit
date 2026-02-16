@@ -32,6 +32,11 @@ class TypeColisResource extends Resource
         return TypeColisForm::configure($schema);
     }
 
+    public static function getNavigationLabel(): string
+    {
+        return 'Gestion des types de colis';
+    }
+
     public static function table(Table $table): Table
     {
         return TypeColisTable::configure($table);

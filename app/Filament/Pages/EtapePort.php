@@ -9,11 +9,15 @@ use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
-use Filament\Tables\Actions\Action;
+use Filament\Forms\Components\DatePicker;
 use Illuminate\Database\Eloquent\Builder;
 use BackedEnum;
 use UnitEnum;
 use Filament\Support\Icons\Heroicon;
+use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 
 class EtapePort extends Page implements HasTable
 {
@@ -57,25 +61,6 @@ class EtapePort extends Page implements HasTable
                     ->limit(30)
                     ->tooltip(fn ($record) => $record->description),
 
-                TextColumn::make('etat_colis')
-                    ->label('État')
-                    ->badge()
-                    ->formatStateUsing(fn ($state) => match ($state) {
-                        'en_attente' => 'En attente',
-                        'en_transit' => 'En transit',
-                        'livre' => 'Livré',
-                        'retenu' => 'Retenu',
-                        'perdu' => 'Perdu',
-                        default => $state,
-                    })
-                    ->colors([
-                        'warning' => 'en_attente',
-                        'info' => 'en_transit',
-                        'success' => 'livre',
-                        'danger' => 'retenu',
-                        'gray' => 'perdu',
-                    ]),
-
                 TextColumn::make('typeColis.nom')
                     ->label('Type')
                     ->sortable()
@@ -113,28 +98,6 @@ class EtapePort extends Page implements HasTable
                     ->color('success')
                     ->toggleable(),
 
-                TextColumn::make('status_colis_port')
-                    ->label('Statut au port')
-                    ->badge()
-                    ->formatStateUsing(fn ($state) => match ($state) {
-                        'EN_ATTENTE' => 'En attente',
-                        'EN_COURS' => 'En cours',
-                        'CHARGEMENT' => 'Chargement',
-                        'DECHARGEMENT' => 'Déchargement',
-                        'SORTI' => 'Sorti',
-                        'BLOQUE' => 'Bloqué',
-                        default => $state ?? 'Non défini',
-                    })
-                    ->colors([
-                        'warning' => 'EN_ATTENTE',
-                        'info' => 'EN_COURS',
-                        'primary' => 'CHARGEMENT',
-                        'secondary' => 'DECHARGEMENT',
-                        'success' => 'SORTI',
-                        'danger' => 'BLOQUE',
-                        'gray' => fn ($state) => $state === null,
-                    ])
-                    ->toggleable(),
 
                 TextColumn::make('created_at')
                     ->label('Créé le')
@@ -152,21 +115,8 @@ class EtapePort extends Page implements HasTable
                     ->label('Statut au port')
                     ->options([
                         'EN_ATTENTE' => 'En attente',
-                        'EN_COURS' => 'En cours',
-                        'CHARGEMENT' => 'Chargement',
-                        'DECHARGEMENT' => 'Déchargement',
+                        'ENTRE' => 'Entrée',
                         'SORTI' => 'Sorti',
-                        'BLOQUE' => 'Bloqué',
-                    ]),
-
-                SelectFilter::make('etat_colis')
-                    ->label('État du colis')
-                    ->options([
-                        'en_attente' => 'En attente',
-                        'en_transit' => 'En transit',
-                        'livre' => 'Livré',
-                        'retenu' => 'Retenu',
-                        'perdu' => 'Perdu',
                     ]),
 
                 SelectFilter::make('client_id')
@@ -175,65 +125,61 @@ class EtapePort extends Page implements HasTable
                     ->searchable()
                     ->preload(),
             ])
-            // ->actions([
-            //     Action::make('voir')
-            //         ->label('Voir détails')
-            //         ->icon('heroicon-o-eye')
-            //         ->url(fn (Colis $record): string => route('filament.admin.resources.colis.edit', $record))
-            //         ->color('info'),
+            ->actions([
+                Action::make('voir')
+                    ->label('Voir détails')
+                    ->icon('heroicon-o-eye')
+                    ->url(fn (Colis $record): string => \App\Filament\Resources\Colis\ColisResource::getUrl('view', ['record' => $record]))
+                    ->color('info'),
 
-            //     Action::make('mettre_a_jour_port')
-            //         ->label('Mettre à jour')
-            //         ->icon('heroicon-o-pencil')
-            //         ->color('warning')
-            //         ->action(function (Colis $record, array $data) {
-            //             $record->update([
-            //                 'status_colis_port' => $data['status_colis_port'],
-            //                 'date_entree_port' => $data['date_entree_port'] ?? $record->date_entree_port,
-            //                 'date_sortie_port' => $data['date_sortie_port'] ?? $record->date_sortie_port,
-            //             ]);
-            //         })
-            //         ->form([
-            //             \Filament\Forms\Components\Select::make('status_colis_port')
-            //                 ->label('Statut au port')
-            //                 ->options([
-            //                     'EN_ATTENTE' => 'En attente',
-            //                     'EN_COURS' => 'En cours',
-            //                     'CHARGEMENT' => 'Chargement',
-            //                     'DECHARGEMENT' => 'Déchargement',
-            //                     'SORTI' => 'Sorti',
-            //                     'BLOQUE' => 'Bloqué',
-            //                 ])
-            //                 ->required(),
-            //             \Filament\Forms\Components\DatePicker::make('date_entree_port')
-            //                 ->label('Date entrée')
-            //                 ->native(false)
-            //                 ->displayFormat('d/m/Y'),
-            //             \Filament\Forms\Components\DatePicker::make('date_sortie_port')
-            //                 ->label('Date sortie')
-            //                 ->native(false)
-            //                 ->displayFormat('d/m/Y')
-            //                 ->afterOrEqual('date_entree_port'),
-            //         ])
-            //         ->modalHeading('Mettre à jour les informations port')
-            //         ->modalButton('Enregistrer')
-            //         ->modalWidth('lg'),
+                Action::make('mettre_a_jour_port')
+                    ->label('Mettre à jour')
+                    ->icon('heroicon-o-pencil')
+                    ->color('warning')
+                    ->action(function (Colis $record, array $data) {
+                        $record->update([
+                            'status_colis_port' => $data['status_colis_port'],
+                            'date_entree_port' => $data['date_entree_port'] ?? $record->date_entree_port,
+                            'date_sortie_port' => $data['date_sortie_port'] ?? $record->date_sortie_port,
+                        ]);
+                    })
+                    ->form([
+                        \Filament\Forms\Components\Select::make('status_colis_port')
+                            ->label('Statut au port')
+                            ->options([
+                                'EN_ATTENTE' => 'En attente',
+                                'ENTRE' => 'Entrée',
+                                'SORTI' => 'Sorti',
+                            ])
+                            ->required(),
+                        DatePicker::make('date_entree_port')
+                            ->label('Date entrée')
+                            ->native(false)
+                            ->displayFormat('d/m/Y'),
+                        DatePicker::make('date_sortie_port')
+                            ->label('Date sortie')
+                            ->native(false)
+                            ->displayFormat('d/m/Y')
+                            ->afterOrEqual('date_entree_port'),
+                    ])
+                    ->modalHeading('Mettre à jour les informations port')
+                    ->modalButton('Enregistrer')
+                    ->modalWidth('lg'),
 
-            //     Action::make('document')
-            //         ->label('Documents')
-            //         ->icon('heroicon-o-document')
-            //         ->color('gray')
-            //         ->url(fn (Colis $record): string => route('filament.admin.resources.documents.index', ['colis_id' => $record->id]))
-            //         ->openUrlInNewTab(),
-            // ])
-            // ->bulkActions([
-            //     \Filament\Tables\Actions\BulkActionGroup::make([
-            //         \Filament\Tables\Actions\DeleteBulkAction::make()
-            //             ->requiresConfirmation(),
-            //     ]),
-            // ])
+            ])
+            ->bulkActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make()
+                        ->requiresConfirmation(),
+                ]),
+            ])
             ->defaultSort('created_at', 'desc')
             ->poll('60s'); // Rafraîchissement automatique toutes les 60 secondes
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return '1 - Etape Port';
     }
 
     public static function getNavigationBadge(): ?string
