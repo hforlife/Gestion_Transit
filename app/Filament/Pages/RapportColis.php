@@ -13,7 +13,7 @@ class RapportColis extends Page
 
     protected static string|UnitEnum|null $navigationGroup = 'Rapports';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 12;
 
     protected string $view = 'filament.pages.rapport-colis';
 

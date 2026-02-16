@@ -10,6 +10,7 @@ use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Actions\Action;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
@@ -22,6 +23,7 @@ use UnitEnum;
 use Filament\Support\Icons\Heroicon;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\BulkAction;
+use Filament\Tables\Tab; // ✅ IMPORT AJOUTÉ
 
 class EtapeDouane extends Page implements HasTable
 {
@@ -40,6 +42,51 @@ class EtapeDouane extends Page implements HasTable
     protected static ?int $navigationSort = 3;
 
     protected string $view = 'filament.pages.etape-douane';
+
+    /**
+     * Définition des onglets de filtrage
+     */
+    public function getTabs(): array
+    {
+        return [
+            'all' => Tab::make('Tous les colis')
+                ->icon('heroicon-o-rectangle-stack'),
+
+            'conteneur' => Tab::make('Conteneurs')
+                ->icon('heroicon-o-cube')
+                ->modifyQueryUsing(fn (Builder $query) =>
+                    $query->whereHas('typeColis', fn ($q) =>
+                        $q->where('nom', 'Conteneur')
+                    )
+                ),
+
+            'vehicule' => Tab::make('Véhicules')
+                ->icon('heroicon-o-truck')
+                ->modifyQueryUsing(fn (Builder $query) =>
+                    $query->whereHas('typeColis', fn ($q) =>
+                        $q->where('nom', 'Véhicules')
+                    )
+                ),
+                
+            'en_attente' => Tab::make('En attente')
+                ->icon('heroicon-o-clock')
+                ->modifyQueryUsing(fn (Builder $query) =>
+                    $query->where('status_colis_douane', 'EN_ATTENTE')
+                ),
+                
+            'entre' => Tab::make('Entrés')
+                ->icon('heroicon-o-arrow-left-circle')
+                ->modifyQueryUsing(fn (Builder $query) =>
+                    $query->where('status_colis_douane', 'ENTRE')
+                ),
+                
+            'sorti' => Tab::make('Sortis')
+                ->icon('heroicon-o-check-circle')
+                ->modifyQueryUsing(fn (Builder $query) =>
+                    $query->where('status_colis_douane', 'SORTI')
+                ),
+        ];
+    }
 
     public function table(Table $table): Table
     {
@@ -102,17 +149,13 @@ class EtapeDouane extends Page implements HasTable
                     ->label('État T1')
                     ->badge()
                     ->formatStateUsing(fn ($state) => match ($state) {
-                        'NON_FOURNI' => 'Non fourni',
                         'FOURNI' => 'Fourni',
                         'PAYE' => 'Payé',
-                        'ANNULE' => 'Annulé',
                         default => $state ?? 'Non défini',
                     })
                     ->colors([
-                        'danger' => 'NON_FOURNI',
                         'warning' => 'FOURNI',
                         'success' => 'PAYE',
-                        'gray' => 'ANNULE',
                     ])
                     ->toggleable(),
 
@@ -130,11 +173,8 @@ class EtapeDouane extends Page implements HasTable
                     ->badge()
                     ->formatStateUsing(fn ($state) => match ($state) {
                         'EN_ATTENTE' => 'En attente',
-                        'EN_COURS' => 'En cours',
                         'ENTRE' => 'Entré',
                         'SORTI' => 'Sorti',
-                        'BLOQUE' => 'Bloqué',
-                        'REFUSE' => 'Refusé',
                         default => $state ?? 'Non défini',
                     })
                     ->colors([
@@ -191,7 +231,7 @@ class EtapeDouane extends Page implements HasTable
                     ->multiple(),
 
                 Filter::make('date_entree_douane')
-                    ->schema([
+                    ->form([
                         Grid::make(2)->schema([
                             DatePicker::make('entree_from')
                                 ->label('Entrée du')
@@ -256,7 +296,7 @@ class EtapeDouane extends Page implements HasTable
                     ->label('Avec déclaration')
                     ->query(fn (Builder $query): Builder => $query->whereNotNull('declaration_reference'))
                     ->toggle(),
-            ])
+            ], layout: FiltersLayout::AboveContent)
             ->actions([
                 Action::make('voir')
                     ->label('Détails complets')
@@ -279,12 +319,9 @@ class EtapeDouane extends Page implements HasTable
                             'date_sortie_douane' => $data['date_sortie_douane'] ?? $record->date_sortie_douane,
                         ]);
 
-                        // Log de l'action
-                        activity()
-                            ->performedOn($record)
-                            ->causedBy(auth()->user())
-                            ->withProperties(['new_data' => $data])
-                            ->log('Mise à jour douane');
+                        // ✅ LOG SIMPLE SANS PACKAGE EXTERNE
+                        // On peut logger dans un fichier ou en session, ou simplement ignorer
+                        // activity() a été retiré
                     })
                     ->form([
                         Grid::make(2)->schema([
@@ -338,7 +375,7 @@ class EtapeDouane extends Page implements HasTable
             ])
             ->bulkActions([
                 BulkActionGroup::make([
-                  BulkAction::make('valider_t1')
+                    BulkAction::make('valider_t1')
                         ->label('Valider T1')
                         ->icon('heroicon-o-check')
                         ->action(fn ($records) => $records->each->update(['etat_t1' => 'PAYE']))
@@ -354,7 +391,7 @@ class EtapeDouane extends Page implements HasTable
                 ]),
             ])
             ->defaultSort('created_at', 'desc')
-            ->poll('30s'); // Rafraîchissement toutes les 30 secondes
+            ->poll('30s');
     }
 
     public static function getNavigationBadge(): ?string
@@ -386,26 +423,5 @@ class EtapeDouane extends Page implements HasTable
             $count > 10 => 'warning',
             default => 'success',
         };
-    }
-
-        public function getTabs(): array
-    {
-        return [
-            'all' => Tab::make('Tous'),
-
-            'conteneur' => Tab::make('Conteneurs')
-                ->modifyQueryUsing(fn (Builder $query) =>
-                    $query->whereHas('typeColis', fn ($q) =>
-                        $q->where('nom', 'Conteneur')
-                    )
-                ),
-
-            'vehicule' => Tab::make('Véhicules')
-                ->modifyQueryUsing(fn (Builder $query) =>
-                    $query->whereHas('typeColis', fn ($q) =>
-                        $q->where('nom', 'Véhicules')
-                    )
-                ),
-        ];
     }
 }

@@ -14,9 +14,12 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use App\Filament\Clusters\Settings\SettingsCluster;
 
 class TypeColisResource extends Resource
 {
+    protected static ?string $cluster = SettingsCluster::class;
+    
     protected static ?string $model = TypeColis::class;
 
     // protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTag;

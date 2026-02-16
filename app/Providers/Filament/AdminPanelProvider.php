@@ -107,7 +107,11 @@ class AdminPanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
             ])
             ->plugins([
-                FilamentShieldPlugin::make(),
+                FilamentShieldPlugin::make()
+                        ->navigationIcon('') 
+                        ->navigationSort(15)
+                        ->navigationLabel('Gestion des rôles')
+                        ->navigationGroup('Paramètres'),
                 FilamentBackgroundsPlugin::make()
                         ->imageProvider(
                 MyImages::make()

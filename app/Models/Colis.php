@@ -98,25 +98,25 @@ class Colis extends Model
     /**
      * Observer automatique
      */
-    protected static function booted()
-    {
-        static::updated(function ($colis) {
-            if ($colis->wasChanged('etat_colis')) {
-                $colis->trackingEvents()->create([
-                    'step' => $colis->etat_colis,
-                    'label' => match ($colis->etat_colis) {
-                        'BL_ENREGISTRE' => 'BL enregistré',
-                        'AU_PORT' => 'Arrivé au port',
-                        'A_LA_DOUANE' => 'À la douane',
-                        'EN_ROUTE' => 'En route',
-                        'LIVRE' => 'Livré',
-                    },
-                    'user_id' => auth()->id(),
-                ]);
-            }
-        });
+    // protected static function booted()
+    // {
+    //     static::updated(function ($colis) {
+    //         if ($colis->wasChanged('etat_colis')) {
+    //             $colis->trackingEvents()->create([
+    //                 'step' => $colis->etat_colis,
+    //                 'label' => match ($colis->etat_colis) {
+    //                     'BL_ENREGISTRE' => 'BL enregistré',
+    //                     'AU_PORT' => 'Arrivé au port',
+    //                     'A_LA_DOUANE' => 'À la douane',
+    //                     'EN_ROUTE' => 'En route',
+    //                     'LIVRE' => 'Livré',
+    //                 },
+    //                 'user_id' => auth()->id(),
+    //             ]);
+    //         }
+    //     });
 
-    }
+    // }
 
     public function getTimeline(): array
     {
