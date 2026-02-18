@@ -10,7 +10,7 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Html;
 use Filament\Schemas\Components\Actions;
-use Filament\Schemas\Components\Actions\Action;
+use Filament\Actions\Action;
 
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
@@ -28,24 +28,30 @@ class ColisForm
     /* =====================================================
      | SAVE RECORD
      ===================================================== */
-    protected static function saveRecord($livewire): void
-    {
-        $data = $livewire->form->getState();
+protected static function saveRecord($livewire): void
+{
+    $data = $livewire->form->getState();
 
-        if (!$livewire->record) {
-            $livewire->record = $livewire->getModel()::create([
-                ...$data,
-                'etat_colis' => 'BL_ENREGISTRE',
-                'status_colis_port' => 'EN_ATTENTE',
-                'status_colis_douane' => 'EN_ATTENTE',
-                'etat_expertise' => 'EN_ATTENTE',
-                'status_colis_livraison' => 'EN_ATTENTE',
-                'status' => 'EN_COURS',
-            ]);
-        } else {
-            $livewire->record->update($data);
-        }
+    // 🔥 Forcer les valeurs si absentes
+    $data['etat_pvc'] = $data['etat_pvc'] ?? 'NON_RECU';
+    $data['etat_ae'] = $data['etat_ae'] ?? 'NON_VALIDE';
+    $data['etat_cmc'] = $data['etat_cmc'] ?? 'NON_RECU';
+    $data['etat_expertise'] = $data['etat_expertise'] ?? 'EN_ATTENTE';
+
+    if (!$livewire->record) {
+        $livewire->record = $livewire->getModel()::create([
+            ...$data,
+            'etat_colis' => 'BL_ENREGISTRE',
+            'status_colis_port' => 'EN_ATTENTE',
+            'status_colis_douane' => 'EN_ATTENTE',
+            'status_colis_livraison' => 'EN_ATTENTE',
+            'status' => 'EN_COURS',
+        ]);
+    } else {
+        $livewire->record->update($data);
     }
+}
+
 
     /* =====================================================
      | COMPLETE STEP
@@ -111,16 +117,19 @@ class ColisForm
                                         Select::make('client_id')
                                             ->relationship('client', 'nom')
                                             ->required()
+                                            ->preload()
                                             ->searchable(),
 
                                         Select::make('id_port')
                                             ->relationship('port', 'nom')
                                             ->required()
+                                            ->preload()
                                             ->searchable(),
 
                                         Select::make('user_id')
                                             ->relationship('agent', 'name')
                                             ->default(auth()->id())
+                                            ->preload()
                                             ->required(),
                                     ]),
                                 ]),
@@ -221,6 +230,124 @@ class ColisForm
                         ])
                         ->afterValidation(fn($livewire) => self::saveRecord($livewire)),
 
+                        
+                    /*
+                    |--------------------------------------------------------------------------
+                    | STEP 4 : EXPERTISE
+                    |--------------------------------------------------------------------------
+                    */
+                    Step::make('Expertise')
+                        ->visible(function ($get, $livewire) {
+                            $typeId = $get('id_type_colis') ?? $livewire->record?->id_type_colis;
+                            if (!$typeId) return false;
+
+                            $type = TypeColis::find($typeId);
+                            $isVehicule = $type && strcasecmp($type->nom, 'Véhicules') === 0;
+
+                            return $isVehicule || auth()->user()?->hasRole('super_admin');
+                        })
+                        ->schema(function ($get, $livewire) {
+                            $typeId = $get('id_type_colis') ?? $livewire->record?->id_type_colis;
+                            $type = $typeId ? TypeColis::find($typeId) : null;
+                            $isVehicule = $type && strcasecmp($type->nom, 'Véhicules') === 0;
+
+                            if (!$isVehicule) {
+                                return [
+                                    Section::make('Expertise non requise')
+                                        ->icon('heroicon-o-information-circle')
+                                        ->schema([
+                                            Html::make('info_expertise')
+                                                ->content(new HtmlString(
+                                                    '<div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                                        <h3 class="text-sm font-semibold text-blue-800">
+                                                            Type de colis : ' . e($type?->nom ?? 'Conteneur') . '
+                                                        </h3>
+                                                        <p class="text-sm text-blue-700 mt-2">
+                                                            L\'expertise ONT est uniquement requise pour les colis 
+                                                            de type <strong>Véhicules</strong>.
+                                                        </p>
+                                                    </div>'
+                                                ))
+                                                ->columnSpanFull(),
+                                        ])
+                                        ->columnSpanFull(),
+                                ];
+                            }
+
+                            return [
+                                Grid::make(2)->schema([
+                                    Select::make('etat_expertise')
+                                        ->label('État de l\'expertise')
+                                        ->options([
+                                            'EN_ATTENTE' => 'En attente',
+                                            'EFFECTUEE' => 'Effectuée',
+                                        ])
+                                        ->default('EN_ATTENTE')
+                                        ->live()
+                                        ->columnSpanFull(),
+
+                                    Section::make('Procès-Verbal de Contrôle (PVC)')
+                                        ->compact()
+                                        ->schema([
+                                            Grid::make(2)->schema([
+                                                TextInput::make('num_pvc')
+                                                    ->label('Numéro PVC')
+                                                    ->maxLength(50)
+                                                    ->required(fn ($get) => $get('etat_expertise') === 'EFFECTUEE'),
+
+                                                Select::make('etat_pvc')
+                                                    ->label('État PVC')
+                                                    ->options([
+                                                        'NON_RECU' => 'Non reçu',
+                                                        'RECU' => 'Reçu',
+                                                        'PAYE' => 'Payé',
+                                                    ])
+                                                    ->default('NON_RECU'),
+                                            ]),
+                                        ])
+                                        ->columnSpanFull(),
+
+                                    Section::make('Autorisation d\'Enlèvement (AE)')
+                                        ->compact()
+                                        ->schema([
+                                            Grid::make(2)->schema([
+                                                TextInput::make('num_ae')
+                                                    ->label('Numéro AE')
+                                                    ->maxLength(50),
+
+                                                Select::make('etat_ae')
+                                                    ->label('État AE')
+                                                    ->options([
+                                                        'NON_VALIDE' => 'Non valide',
+                                                        'VALIDE' => 'Valide',
+                                                    ])
+                                                    ->default('NON_VALIDE'),
+                                            ]),
+                                        ])
+                                        ->columnSpanFull(),
+
+                                    Section::make('Certificat de Mise en Conformité (CMC)')
+                                        ->compact()
+                                        ->schema([
+                                            Grid::make(2)->schema([
+                                                TextInput::make('num_cmc')
+                                                    ->label('Numéro CMC')
+                                                    ->maxLength(50),
+
+                                                Select::make('etat_cmc')
+                                                    ->label('État CMC')
+                                                    ->options([
+                                                        'NON_RECU' => 'Non reçu',
+                                                        'RECU' => 'Reçu',
+                                                    ])
+                                                    ->default('NON_RECU'),
+                                            ]),
+                                        ])
+                                        ->columnSpanFull(),
+                                ]),
+                            ];
+                        })
+                        ->afterValidation(fn($livewire) => self::saveRecord($livewire)),
                     /* =====================================================
                      | STEP 4 - LIVRAISON
                      ===================================================== */

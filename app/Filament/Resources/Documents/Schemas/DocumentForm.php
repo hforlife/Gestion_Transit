@@ -25,6 +25,9 @@ class DocumentForm
                     ->required(),
                 Select::make('type_document')
                     ->options([
+                        'BL' => 'BL',
+                        'T1' => 'T1',
+                        'Déclaration' => 'Déclaration',
                         'PVC' => 'PVC',
                         'AE' => 'AE',
                         'CMC' => 'CMC',
@@ -43,7 +46,7 @@ class DocumentForm
                         : 'dossiers-transit/temp'
                     )
                     ->acceptedFileTypes(['application/pdf'])
-                    ->maxSize(10240) // 10 MB
+                    ->maxSize(10240)
                     ->preserveFilenames()
                     ->openable()
                     ->downloadable()

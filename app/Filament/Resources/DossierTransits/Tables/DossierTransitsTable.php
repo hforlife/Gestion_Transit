@@ -43,6 +43,13 @@ class DossierTransitsTable
                     ->sortable()
                     ->limit(25)
                     ->tooltip(fn($record) => $record->nom),
+                
+                TextColumn::make('colis.client.nom')
+                    ->label('Client')
+                    ->searchable()
+                    ->sortable()
+                    ->limit(25)
+                    ->tooltip(fn($record) => $record->nom),
 
                 TextColumn::make('colis.numero_bl')
                     ->label('N° BL')

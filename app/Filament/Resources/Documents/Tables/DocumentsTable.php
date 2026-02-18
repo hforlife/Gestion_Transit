@@ -30,6 +30,9 @@ class DocumentsTable
                 TextColumn::make('type_document')
                     ->badge()
                     ->colors([
+                        'primary' => 'BL',
+                        'success' => 'T1',
+                        'warning' => 'Déclaration',
                         'primary' => 'PVC',
                         'success' => 'AE',
                         'warning' => 'CMC',
@@ -76,10 +79,16 @@ class DocumentsTable
             |--------------------------------------------------------------------------
             */
             ->filters([
+                SelectFilter::make('Client')
+                    ->label('Client')
+                    ->relationship('dossierTransit.colis.client', 'nom'),
 
                 SelectFilter::make('type_document')
                     ->label('Type document')
                     ->options([
+                        'BL' => 'BL',
+                        'T1' => 'T1',
+                        'Déclaration' => 'Déclaration',
                         'PVC' => 'PVC',
                         'AE' => 'AE',
                         'CMC' => 'CMC',
