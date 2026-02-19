@@ -84,10 +84,10 @@ class ViewColis extends ViewRecord
                                         ]),
                                         
                                         Grid::make(3)->schema([
-                                            TextEntry::make('client.nom')
+                                            TextEntry::make('dossierTransit.client.nom')
                                                 ->label('Client')
                                                 ->icon('heroicon-o-user')
-                                                ->url(fn ($record) => \App\Filament\Resources\Clients\ClientResource::getUrl('edit', ['record' => $record->client_id]))
+                                                // ->url(fn ($record) => \App\Filament\Resources\Clients\ClientResource::getUrl('edit', ['record' => $record->client_id]))
                                                 ->openUrlInNewTab(),
                                                 
                                             TextEntry::make('port.nom')

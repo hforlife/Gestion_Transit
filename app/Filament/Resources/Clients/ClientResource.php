@@ -15,9 +15,11 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use App\Filament\Clusters\Settings\SettingsCluster;
+use BezhanSalleh\FilamentShield\Traits\HasShieldPermissions;
 
 class ClientResource extends Resource
 {
+    // use HasShieldPermissions;
     // protected static ?string $cluster = SettingsCluster::class;
     
     protected static ?string $model = Client::class;

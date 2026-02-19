@@ -22,6 +22,7 @@ use Filament\Forms\Set;
 use Filament\Notifications\Notification;
 
 use Illuminate\Support\HtmlString;
+use Illuminate\Validation\Rule;
 
 class ColisForm
 {
@@ -103,7 +104,10 @@ protected static function saveRecord($livewire): void
 
                                         TextInput::make('numero_bl')
                                             ->required()
-                                            ->unique(ignoreRecord: true),
+                                             ->rule(function ($livewire) {
+                                                    return Rule::unique('colis', 'numero_bl')
+                                                        ->ignore($livewire->record?->id);
+                                                }),
 
                                         Select::make('id_type_colis')
                                             ->relationship('typeColis', 'nom')
@@ -116,7 +120,17 @@ protected static function saveRecord($livewire): void
 
                                         Select::make('id_dossier_transit')
                                             ->label('Dossier colis')
-                                            ->relationship('dossierTransit', 'nom')
+                                            ->relationship('dossierTransit', 'nom', function ($query, $livewire) {
+                                                $record = $livewire->record;
+
+                                                $query->where(function ($q) use ($record) {
+                                                    $q->doesntHave('colis');
+
+                                                    if ($record?->id_dossier_transit) {
+                                                        $q->orWhere('id', $record->id_dossier_transit);
+                                                    }
+                                                });
+                                            })
                                             ->required()
                                             ->preload()
                                             ->searchable(),

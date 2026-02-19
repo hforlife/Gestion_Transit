@@ -18,9 +18,9 @@ class ClientsTable
         return $table
 
             // ✅ Optimisation si relation colis existe
-            ->modifyQueryUsing(fn (Builder $query) =>
-                $query->withCount('colis')
-            )
+            // ->modifyQueryUsing(fn (Builder $query) =>
+            //     $query->withCount('colis')
+            // )
 
             ->columns([
 
@@ -59,12 +59,12 @@ class ClientsTable
                  |  ACTIVITÉ
                  ===============================*/
 
-                TextColumn::make('colis_count')
-                    ->label('Nb Colis')
-                    ->badge()
-                    ->color(fn ($state) =>
-                        $state > 0 ? 'primary' : 'secondary'
-                    ),
+                // TextColumn::make('colis_count')
+                //     ->label('Nb Colis')
+                //     ->badge()
+                //     ->color(fn ($state) =>
+                //         $state > 0 ? 'primary' : 'secondary'
+                //     ),
 
                 /* ===============================
                  |  SYSTEME
