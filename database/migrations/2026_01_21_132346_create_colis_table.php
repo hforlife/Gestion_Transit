@@ -19,7 +19,7 @@ return new class extends Migration {
             $table->foreignId('id_type_colis')->constrained('type_colis');
             $table->foreignId('user_id')->constrained('users');
             $table->foreignId('id_port')->constrained('ports');
-            $table->foreignId('client_id')->constrained('clients');
+            // $table->foreignId('client_id')->constrained('clients');
             $table->enum('etat_colis', [
                 'BL_ENREGISTRE',
                 'AU_PORT',

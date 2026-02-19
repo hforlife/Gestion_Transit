@@ -18,11 +18,11 @@ use App\Filament\Clusters\Settings\SettingsCluster;
 
 class ClientResource extends Resource
 {
-    protected static ?string $cluster = SettingsCluster::class;
+    // protected static ?string $cluster = SettingsCluster::class;
     
     protected static ?string $model = Client::class;
 
-    protected static string | UnitEnum | null $navigationGroup = 'Paramètres';
+    protected static string | UnitEnum | null $navigationGroup = 'Gestion Clients';
 
     // protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;
 
@@ -50,6 +50,7 @@ class ClientResource extends Resource
         return [
             //
         ];
+        
     }
 
     public static function getPages(): array

@@ -39,7 +39,7 @@ class EtapeDouane extends Page implements HasTable
     
     protected static string | UnitEnum | null $navigationGroup = 'Colis';
     
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 5;
 
     protected string $view = 'filament.pages.etape-douane';
 

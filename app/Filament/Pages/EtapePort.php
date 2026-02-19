@@ -37,7 +37,7 @@ class EtapePort extends Page implements HasTable
     
     protected static string | UnitEnum | null $navigationGroup = 'Colis';
     
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 4;
 
     protected string $view = 'filament.pages.etape-port';
 

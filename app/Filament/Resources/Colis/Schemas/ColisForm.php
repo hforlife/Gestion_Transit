@@ -114,8 +114,9 @@ protected static function saveRecord($livewire): void
                                         Textarea::make('description')
                                             ->columnSpanFull(),
 
-                                        Select::make('client_id')
-                                            ->relationship('client', 'nom')
+                                        Select::make('id_dossier_transit')
+                                            ->label('Dossier colis')
+                                            ->relationship('dossierTransit', 'nom')
                                             ->required()
                                             ->preload()
                                             ->searchable(),
@@ -431,7 +432,7 @@ protected static function saveRecord($livewire): void
                         ])
                         ->afterValidation(fn($livewire) => self::saveRecord($livewire)),
                 ])
-                ->persistStepInQueryString()
+                ->persistStepInQueryString('step')
                 ->columnSpanFull(),
             ]);
     }

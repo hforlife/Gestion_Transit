@@ -42,7 +42,7 @@ class EtapeLivraison extends Page implements HasTable
     
     protected static string | UnitEnum | null $navigationGroup = 'Colis';
     
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 7;
 
     protected string $view = 'filament.pages.etape-livraison';
 

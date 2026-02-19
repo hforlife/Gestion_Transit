@@ -9,6 +9,7 @@ use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Table;
+use App\Filament\Resources\Colis\ColisResource;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,8 +20,14 @@ class ColisTable
     {
         return $table
             ->modifyQueryUsing(fn (Builder $query) =>
-                $query->with(['typeColis', 'client', 'port', 'agent'])
+                $query->with([
+                    'typeColis',
+                    'dossierTransit.client',
+                    'port',
+                    'agent'
+                ])
             )
+
 
             ->columns([
 
@@ -45,7 +52,7 @@ class ColisTable
                     )
                     ->sortable(),
 
-                TextColumn::make('client.nom')
+                TextColumn::make('dossierTransit.client.nom')
                     ->label('Client')
                     ->searchable()
                     ->sortable(),
@@ -221,7 +228,24 @@ class ColisTable
                 EditAction::make()
                     ->visible(fn ($record) =>
                         $record->status !== 'TERMINE'
-                    ),
+                    )
+                    ->url(function ($record) {
+
+                        $step = match ($record->etat_colis) {
+                            'BL_ENREGISTRE' => 'Enregistrement',
+                            'A_LA_DOUANE'   => 'Port',
+                            'EN_ROUTE'      => 'Douane',
+                            'LIVRE'         => 'Livraison',
+                            'CLOTURE'       => 'Finalisation',
+                            default         => 'Enregistrement',
+                        };
+
+                        return ColisResource::getUrl('edit', [
+                            'record' => $record,
+                            'step'   => $step,
+                        ]);
+                    }),
+
 
             ])
 

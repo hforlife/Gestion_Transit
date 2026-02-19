@@ -12,10 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('colis', function (Blueprint $table) {
-            //  $table->foreignId('client_id')->constrained('clients')->after('id_port');
-            $table->date('date_livraison')->nullable()->after('date_sortie_douane');
-            $table->enum('status_colis_livraison', ['EN_ATTENTE', 'LIVRE'])->default('EN_ATTENTE')->after('date_livraison');
-            $table->string('commentaires_cloture')->nullable();
+            $table->foreignId('id_dossier_transit')
+                    ->nullable()
+                    ->constrained('dossier_transits')
+                    ->cascadeOnDelete();
         });
     }
 

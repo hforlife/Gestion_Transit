@@ -16,9 +16,8 @@ return new class extends Migration {
             $table->string('nom');
             // $table->string('repertoire')->nullable();
             $table->date('date_depot')->nullable();
-            $table->enum('status', ['OUVERT', 'EN_COURS', 'CLOTURE']);
-
-            $table->foreignId('colis_id')->constrained('colis');
+            $table->enum('status', ['EN_COURS', 'CLOTURE']);
+            $table->foreignId('client_id')->constrained('clients');
             $table->foreignId('id_type_dossier')->constrained('type_dossiers');
 
             $table->timestamps();

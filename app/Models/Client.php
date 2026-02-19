@@ -18,4 +18,9 @@ class Client extends Model
     {
         return $this->hasMany(Colis::class);
     }
+
+    public function dossierTransit()
+    {
+        return $this->belongTo(dossierTransit::class);
+    }
 }

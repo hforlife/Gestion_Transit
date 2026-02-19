@@ -17,18 +17,13 @@ class DossierTransitsTable
     public static function configure(Table $table): Table
     {
         return $table
-
-            // ✅ Optimisation requête
             ->modifyQueryUsing(
-                fn(Builder $query) =>
-                $query->withCount('documents')
+                fn (Builder $query) =>
+                $query->with(['client', 'colis', 'type_dossier'])
+                    ->withCount('documents')
             )
 
             ->columns([
-
-                /* ===============================
-                 |  INFORMATIONS PRINCIPALES
-                 ===============================*/
 
                 TextColumn::make('reference')
                     ->label('Référence')
@@ -42,21 +37,18 @@ class DossierTransitsTable
                     ->searchable()
                     ->sortable()
                     ->limit(25)
-                    ->tooltip(fn($record) => $record->nom),
-                
-                TextColumn::make('colis.client.nom')
+                    ->tooltip(fn ($record) => $record->nom),
+
+                TextColumn::make('client.nom')
                     ->label('Client')
                     ->searchable()
-                    ->sortable()
-                    ->limit(25)
-                    ->tooltip(fn($record) => $record->nom),
+                    ->sortable(),
 
                 TextColumn::make('colis.numero_bl')
                     ->label('N° BL')
                     ->badge()
                     ->color('primary')
-                    ->searchable()
-                    ->sortable(),
+                    ->placeholder('Aucun colis'),
 
                 TextColumn::make('type_dossier.nom')
                     ->label('Type')
@@ -64,35 +56,26 @@ class DossierTransitsTable
                     ->color('secondary')
                     ->sortable(),
 
-                /* ===============================
-                 |  DATE
-                 ===============================*/
-
                 TextColumn::make('date_depot')
                     ->label('Date dépôt')
                     ->date('d/m/Y')
                     ->sortable(),
 
-                /* ===============================
-                 |  STATUT
-                 ===============================*/
-
                 TextColumn::make('status')
                     ->label('Statut')
                     ->badge()
-                    ->color(fn($state) => match ($state) {
+                    ->color(fn ($state) => match ($state) {
                         'OUVERT' => 'warning',
                         'EN_COURS' => 'info',
                         'CLOTURE' => 'success',
                         default => 'gray',
-                    })
-                    ->sortable(),
+                    }),
 
                 IconColumn::make('is_closed')
                     ->label('Clôturé')
                     ->boolean()
                     ->getStateUsing(
-                        fn($record) =>
+                        fn ($record) =>
                         $record->status === 'CLOTURE'
                     )
                     ->color('success'),
@@ -100,24 +83,10 @@ class DossierTransitsTable
                 TextColumn::make('documents_count')
                     ->label('Nb Documents')
                     ->badge()
-                    ->color(
-                        fn($state) =>
-                        $state > 0 ? 'primary' : 'secondary'
-                    )
-                    ->sortable(),
-
-                /* ===============================
-                 |  SYSTEME
-                 ===============================*/
+                    ->color(fn ($state) => $state > 0 ? 'primary' : 'secondary'),
 
                 TextColumn::make('created_at')
                     ->label('Créé le')
-                    ->dateTime('d/m/Y H:i')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                TextColumn::make('updated_at')
-                    ->label('Mis à jour')
                     ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -133,7 +102,7 @@ class DossierTransitsTable
                         'CLOTURE' => 'Clôturé',
                     ]),
 
-                SelectFilter::make('type_dossier_id')
+                SelectFilter::make('id_type_dossier')
                     ->label('Type de dossier')
                     ->relationship('type_dossier', 'nom')
                     ->searchable(),
@@ -144,10 +113,7 @@ class DossierTransitsTable
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make()
-                    ->visible(
-                        fn($record) =>
-                        $record->status !== 'CLOTURE'
-                    ),
+                    ->visible(fn ($record) => $record->status !== 'CLOTURE'),
             ])
 
             ->toolbarActions([
@@ -157,3 +123,4 @@ class DossierTransitsTable
             ]);
     }
 }
+

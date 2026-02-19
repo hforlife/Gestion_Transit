@@ -8,7 +8,7 @@ class DossierTransit extends Model
 {
     //
     protected $fillable = [
-        'colis_id',
+        'client_id',
         'agent_id',
         'id_type_dossier',
         'nom',
@@ -17,9 +17,9 @@ class DossierTransit extends Model
         'statut'
     ];
 
-    public function colis()
+    public function client()
     {
-        return $this->belongsTo(Colis::class);
+        return $this->belongsTo(Client::class);
     }
 
     public function documents()
@@ -32,11 +32,9 @@ class DossierTransit extends Model
         return $this->belongsTo(TypeDossier::class, 'id_type_dossier');
     }
 
-    public function trackingEvents()
+    public function colis()
     {
-        return $this->morphMany(TrackingEvent::class, 'trackable')
-            ->orderBy('created_at');
+        return $this->hasOne(Colis::class, 'id_dossier_transit');
     }
-
 
 }

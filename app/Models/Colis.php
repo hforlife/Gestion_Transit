@@ -14,7 +14,7 @@ class Colis extends Model
         'id_type_colis',
         'user_id',
         'id_port',
-        'client_id',
+        'id_dossier_transit',
         // port
         'date_entree_port',
         'date_sortie_port',
@@ -46,11 +46,6 @@ class Colis extends Model
         return $this->belongsTo(TypeColis::class, 'id_type_colis');
     }
 
-    public function client()
-    {
-        return $this->belongsTo(Client::class);
-    }
-
     public function agent()
     {
         return $this->belongsTo(User::class, 'user_id');
@@ -63,7 +58,12 @@ class Colis extends Model
 
     public function dossierTransit()
     {
-        return $this->hasOne(DossierTransit::class);
+        return $this->belongsTo(DossierTransit::class, 'id_dossier_transit');
+    }
+
+    public function client()
+    {
+        return $this->belongsTo(Client::class);
     }
 
     // public function portOperation()

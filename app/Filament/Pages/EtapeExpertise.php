@@ -41,7 +41,7 @@ class EtapeExpertise extends Page implements HasTable
     
     protected static string | UnitEnum | null $navigationGroup = 'Colis';
     
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 6;
 
     protected string $view = 'filament.pages.etape-expertise';
 

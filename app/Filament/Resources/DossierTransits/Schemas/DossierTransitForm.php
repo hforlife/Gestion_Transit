@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\DossierTransits\Schemas;
 
 use App\Models\Colis;
+use App\Models\DossierTransit;
 use App\Models\TypeDossier;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -20,63 +21,87 @@ class DossierTransitForm
     {
         return $schema->components([
             
-            Select::make('colis_id')
-                ->label('Colis associé')
+            Select::make('client_id')
+                ->label('Client associé')
                 ->relationship(
-                    name: 'colis',
-                    titleAttribute: 'numero_bl'
+                    name: 'client',
+                    titleAttribute: 'nom'
                 )
                 ->searchable()
                 ->preload()
                 ->required()
                 ->live(),
 
-            TextInput::make('reference')
-                ->label('Référence du dossier')
-                ->required()
-                ->unique(ignoreRecord: true)
-                ->maxLength(255)
-                ->readOnly()
-                ->suffixAction(
-                    Action::make('generateReference')
-                        ->icon('heroicon-o-arrow-path')
-                        ->tooltip('Générer automatiquement')
-                        ->action(function ($get, $set) {
+           TextInput::make('reference')
+    ->label('Référence du dossier')
+    ->required()
+    ->unique(ignoreRecord: true)
+    ->maxLength(255)
+    ->readOnly()
+    ->suffixAction(
+        Action::make('generateReference')
+            ->icon('heroicon-o-arrow-path')
+            ->tooltip('Générer automatiquement')
+            ->action(function ($get, $set, $livewire) {
 
-                            $colisId = $get('colis_id');
+                $record = $livewire->record;
 
-                            if (! $colisId) {
-                                return;
-                            }
+                $prefix = 'C'; // défaut
 
-                            $colis = Colis::with('typeColis')->find($colisId);
+                /*
+                |--------------------------------------------------
+                | Si on modifie un dossier existant
+                |--------------------------------------------------
+                */
+                if ($record && $record->colis) {
 
-                            if (! $colis || ! $colis->typeColis) {
-                                return;
-                            }
+                    $typeNom = strtolower($record->colis->typeColis->nom ?? '');
 
-                            $typeNom = strtolower($colis->typeColis->nom);
+                    $prefix = match (true) {
+                        str_contains($typeNom, 'véhicule') => 'V',
+                        str_contains($typeNom, 'conteneur') => 'C',
+                        default => 'C',
+                    };
+                }
 
-                            // Déterminer la lettre
-                            $prefix = match (true) {
-                                str_contains($typeNom, 'véhicule') => 'V',
-                                str_contains($typeNom, 'conteneur') => 'C',
-                                default => 'D',
-                            };
+                /*
+                |--------------------------------------------------
+                | Si on est en création
+                |--------------------------------------------------
+                */
+                if (! $record) {
 
-                            $year = Carbon::now()->year;
+                    $clientId = $get('client_id');
 
-                            // Compter combien de dossiers cette année avec ce prefix
-                            $count = \App\Models\DossierTransit::where('reference', 'like', "{$prefix}{$year}-%")
-                                ->count();
+                    $colis = Colis::with('typeColis')
+                        ->whereHas('dossierTransit', function ($query) use ($clientId) {
+                        $query->where('client_id', $clientId);})
+                        ->latest()
+                        ->first();
 
-                            $nextNumber = str_pad($count + 1, 4, '0', STR_PAD_LEFT);
+                    if ($colis) {
+                        $typeNom = strtolower($colis->typeColis->nom ?? '');
 
-                            $reference = "{$prefix}{$year}-{$nextNumber}";
+                        $prefix = match (true) {
+                            str_contains($typeNom, 'véhicule') => 'V',
+                            str_contains($typeNom, 'conteneur') => 'C',
+                            default => 'C',
+                        };
+                    }
+                }
 
-                            $set('reference', $reference);
-                        })
-                ),
+                $year = Carbon::now()->year;
+
+                $count = DossierTransit::where('reference', 'like', "{$prefix}{$year}-%")
+                    ->count();
+
+                $nextNumber = str_pad($count + 1, 4, '0', STR_PAD_LEFT);
+
+                $reference = "{$prefix}{$year}-{$nextNumber}";
+
+                $set('reference', $reference);
+            })
+    ),
 
 
             TextInput::make('nom')
@@ -92,7 +117,6 @@ class DossierTransitForm
             Select::make('status')
                 ->label('Statut du dossier')
                 ->options([
-                    'OUVERT' => 'Ouvert',
                     'EN_COURS' => 'En cours',
                     'CLOTURE' => 'Clôturé',
                 ])
