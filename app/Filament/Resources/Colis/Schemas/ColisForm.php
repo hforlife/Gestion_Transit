@@ -97,6 +97,19 @@ protected static function saveRecord($livewire): void
                      | STEP 1 - ENREGISTREMENT
                      ===================================================== */
                     Step::make('Enregistrement')
+                        ->visible(function ($get, $livewire) {
+
+                            $user = auth()->user();
+
+                            if (!$user) return false;
+
+                            return (
+                                $user->hasAnyRole([
+                                    'super_admin',
+                                    'agent_saisie'
+                                ])
+                            );
+                        })
                         ->schema([
                             Section::make('Informations du colis')
                                 ->schema([
@@ -155,6 +168,19 @@ protected static function saveRecord($livewire): void
                      | STEP 2 - PORT
                      ===================================================== */
                     Step::make('Port')
+                        ->visible(function ($get, $livewire) {
+
+                            $user = auth()->user();
+
+                            if (!$user) return false;
+
+                            return (
+                                $user->hasAnyRole([
+                                    'super_admin',
+                                    'agent_transit',
+                                ])
+                            );
+                        })
                         ->schema([
                             Section::make('Opérations portuaires')
                                 ->schema([
@@ -201,6 +227,19 @@ protected static function saveRecord($livewire): void
                      | STEP 3 - DOUANE
                      ===================================================== */
                     Step::make('Douane')
+                        ->visible(function ($get, $livewire) {
+
+                            $user = auth()->user();
+
+                            if (!$user) return false;
+
+                            return (
+                                $user->hasAnyRole([
+                                    'super_admin',
+                                    'agent_transit',
+                                ])
+                            );
+                        })
                         ->schema([
                             Section::make('Formalités douanières')
                                 ->schema([
@@ -252,21 +291,35 @@ protected static function saveRecord($livewire): void
                     |--------------------------------------------------------------------------
                     */
                     Step::make('Expertise')
-                        ->visible(function ($get, $livewire) {
+                       ->visible(function ($get, $livewire) {
+
+                            $user = auth()->user();
+
+                            if (!$user) return false;
+
                             $typeId = $get('id_type_colis') ?? $livewire->record?->id_type_colis;
                             if (!$typeId) return false;
 
                             $type = TypeColis::find($typeId);
                             $isVehicule = $type && strcasecmp($type->nom, 'Véhicules') === 0;
 
-                            return $isVehicule || auth()->user()?->hasRole('super_admin');
+                            return (
+                                $user->hasAnyRole([
+                                    'super_admin',
+                                    'expert',
+                                ])
+                                && $isVehicule
+                            );
                         })
                         ->schema(function ($get, $livewire) {
                             $typeId = $get('id_type_colis') ?? $livewire->record?->id_type_colis;
                             $type = $typeId ? TypeColis::find($typeId) : null;
                             $isVehicule = $type && strcasecmp($type->nom, 'Véhicules') === 0;
 
-                            if (!$isVehicule) {
+                            $user = auth()->user();
+                            $canSeeMessage = $user?->hasAnyRole(['super-admin', 'expert']);
+
+                            if (!$isVehicule && $canSeeMessage) {
                                 return [
                                     Section::make('Expertise non requise')
                                         ->icon('heroicon-o-information-circle')
@@ -367,6 +420,19 @@ protected static function saveRecord($livewire): void
                      | STEP 4 - LIVRAISON
                      ===================================================== */
                     Step::make('Livraison')
+                                                               ->visible(function ($get, $livewire) {
+
+                            $user = auth()->user();
+
+                            if (!$user) return false;
+
+                            return (
+                                $user->hasAnyRole([
+                                    'super_admin',
+                                    'agent_transit',
+                                ])
+                            );
+                        })
                         ->schema([
                             Section::make('Livraison')
                                 ->schema([
@@ -411,6 +477,19 @@ protected static function saveRecord($livewire): void
                      | STEP 5 - FINALISATION
                      ===================================================== */
                     Step::make('Finalisation')
+                                                               ->visible(function ($get, $livewire) {
+
+                            $user = auth()->user();
+
+                            if (!$user) return false;
+
+                            return (
+                                $user->hasAnyRole([
+                                    'super_admin',
+                                    'agent_transit',
+                                ])
+                            );
+                        })
                         ->schema([
                             Section::make('Clôture')
                                 ->schema([

@@ -19,6 +19,11 @@ class RapportBlocages extends Page
 
     protected string $view = 'filament.pages.rapport-blocages';
 
+        public static function canAccess(): bool
+    {
+        return auth()->user()->can('View:RapportBlocages');
+    }
+
     protected function getHeaderWidgets(): array
     {
         return [

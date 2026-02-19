@@ -41,6 +41,11 @@ class EtapePort extends Page implements HasTable
 
     protected string $view = 'filament.pages.etape-port';
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()->can('View:EtapePort');
+    }
+
     /**
      * Définition des onglets de filtrage
      */

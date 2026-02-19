@@ -46,6 +46,11 @@ class EtapeLivraison extends Page implements HasTable
 
     protected string $view = 'filament.pages.etape-livraison';
 
+        public static function canAccess(): bool
+    {
+        return auth()->user()->can('View:EtapeLivraison');
+    }
+
     /**
      * Définition des onglets de filtrage
      */

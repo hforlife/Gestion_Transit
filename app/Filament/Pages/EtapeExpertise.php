@@ -45,6 +45,11 @@ class EtapeExpertise extends Page implements HasTable
 
     protected string $view = 'filament.pages.etape-expertise';
 
+        public static function canAccess(): bool
+    {
+        return auth()->user()->can('View:EtapeExpertise');
+    }
+
 
     public function table(Table $table): Table
     {

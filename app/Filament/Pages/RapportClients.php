@@ -20,6 +20,11 @@ class RapportClients extends Page
     
     protected string $view = 'filament.pages.rapport-clients';
 
+        public static function canAccess(): bool
+    {
+        return auth()->user()->can('View:$RapportClients');
+    }
+
     protected function getHeaderWidgets(): array
     {
         return [

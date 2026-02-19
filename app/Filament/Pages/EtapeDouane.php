@@ -43,6 +43,11 @@ class EtapeDouane extends Page implements HasTable
 
     protected string $view = 'filament.pages.etape-douane';
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()->can('View:EtapeDouane');
+    }
+
     /**
      * Définition des onglets de filtrage
      */
