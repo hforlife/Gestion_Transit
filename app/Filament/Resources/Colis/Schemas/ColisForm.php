@@ -2,64 +2,106 @@
 
 namespace App\Filament\Resources\Colis\Schemas;
 
+use App\Models\DossierTransit;
 use App\Models\TypeColis;
-use Filament\Schemas\Schema;
+use Carbon\Carbon;
+use Filament\Actions\Action;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Actions;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Html;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
-use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Html;
-use Filament\Schemas\Components\Actions;
-use Filament\Actions\Action;
-
-use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Hidden;
-
-use Filament\Forms\Set;
-use Filament\Notifications\Notification;
-
+use Filament\Schemas\Schema;
 use Illuminate\Support\HtmlString;
 use Illuminate\Validation\Rule;
 
 class ColisForm
 {
     /* =====================================================
+     | Update Dossier Reference
+     ===================================================== */
+    protected static function updateDossierReference($record): void
+    {
+        if (! $record?->id_dossier_transit) {
+            return;
+        }
+
+        $dossier = DossierTransit::find($record->id_dossier_transit);
+
+        if (! $dossier) {
+            return;
+        }
+
+        $typeNom = strtolower($record->typeColis->nom ?? '');
+
+        $prefix = match (true) {
+            str_contains($typeNom, 'véhicule') => 'V',
+            str_contains($typeNom, 'conteneur') => 'C',
+            default => 'C',
+        };
+
+        $year = Carbon::now()->year;
+
+        $count = DossierTransit::where('reference', 'like', "{$prefix}{$year}-%")
+            ->where('id', '!=', $dossier->id)
+            ->count();
+
+        $nextNumber = str_pad($count + 1, 4, '0', STR_PAD_LEFT);
+
+        $reference = "{$prefix}{$year}-{$nextNumber}";
+
+        $dossier->update([
+            'reference' => $reference,
+        ]);
+    }
+
+    /* =====================================================
      | SAVE RECORD
      ===================================================== */
-protected static function saveRecord($livewire): void
-{
-    $data = $livewire->form->getState();
+    protected static function saveRecord($livewire): void
+    {
+        $data = $livewire->form->getState();
 
-    // 🔥 Forcer les valeurs si absentes
-    $data['etat_pvc'] = $data['etat_pvc'] ?? 'NON_RECU';
-    $data['etat_ae'] = $data['etat_ae'] ?? 'NON_VALIDE';
-    $data['etat_cmc'] = $data['etat_cmc'] ?? 'NON_RECU';
-    $data['etat_expertise'] = $data['etat_expertise'] ?? 'EN_ATTENTE';
+        // 🔥 Forcer les valeurs si absentes
+        $data['etat_pvc'] = $data['etat_pvc'] ?? 'NON_RECU';
+        $data['etat_ae'] = $data['etat_ae'] ?? 'NON_VALIDE';
+        $data['etat_cmc'] = $data['etat_cmc'] ?? 'NON_RECU';
+        $data['etat_expertise'] = $data['etat_expertise'] ?? 'EN_ATTENTE';
 
-    if (!$livewire->record) {
-        $livewire->record = $livewire->getModel()::create([
-            ...$data,
-            'etat_colis' => 'BL_ENREGISTRE',
-            'status_colis_port' => 'EN_ATTENTE',
-            'status_colis_douane' => 'EN_ATTENTE',
-            'status_colis_livraison' => 'EN_ATTENTE',
-            'status' => 'EN_COURS',
-        ]);
-    } else {
-        $livewire->record->update($data);
+        if (! $livewire->record) {
+            $livewire->record = $livewire->getModel()::create([
+                ...$data,
+                'etat_colis' => 'BL_ENREGISTRE',
+                'status_colis_port' => 'EN_ATTENTE',
+                'status_colis_douane' => 'EN_ATTENTE',
+                'status_colis_livraison' => 'EN_ATTENTE',
+                'status' => 'EN_COURS',
+            ]);
+
+            // 🔥 Mise à jour automatique de la référence du dossier
+            self::updateDossierReference($livewire->record);
+        } else {
+            $livewire->record->update($data);
+
+            // 🔥 Si on change le type ou le dossier
+            self::updateDossierReference($livewire->record);
+        }
     }
-}
-
 
     /* =====================================================
      | COMPLETE STEP
      ===================================================== */
     protected static function completeStep(string $step, $record): void
     {
-        if (!$record) return;
+        if (! $record) {
+            return;
+        }
 
         $updates = match ($step) {
             'Port' => [
@@ -101,14 +143,15 @@ protected static function saveRecord($livewire): void
 
                             $user = auth()->user();
 
-                            if (!$user) return false;
+                            if (! $user) {
+                                return false;
+                            }
 
-                            return (
+                            return
                                 $user->hasAnyRole([
-                                    'super_admin',
-                                    'agent_saisie'
-                                ])
-                            );
+                                    'super-admin',
+                                    'agent-saisie',
+                                ]);
                         })
                         ->schema([
                             Section::make('Informations du colis')
@@ -117,10 +160,10 @@ protected static function saveRecord($livewire): void
 
                                         TextInput::make('numero_bl')
                                             ->required()
-                                             ->rule(function ($livewire) {
-                                                    return Rule::unique('colis', 'numero_bl')
-                                                        ->ignore($livewire->record?->id);
-                                                }),
+                                            ->rule(function ($livewire) {
+                                                return Rule::unique('colis', 'numero_bl')
+                                                    ->ignore($livewire->record?->id);
+                                            }),
 
                                         Select::make('id_type_colis')
                                             ->relationship('typeColis', 'nom')
@@ -162,7 +205,7 @@ protected static function saveRecord($livewire): void
                                     ]),
                                 ]),
                         ])
-                        ->afterValidation(fn($livewire) => self::saveRecord($livewire)),
+                        ->afterValidation(fn ($livewire) => self::saveRecord($livewire)),
 
                     /* =====================================================
                      | STEP 2 - PORT
@@ -172,14 +215,15 @@ protected static function saveRecord($livewire): void
 
                             $user = auth()->user();
 
-                            if (!$user) return false;
+                            if (! $user) {
+                                return false;
+                            }
 
-                            return (
+                            return
                                 $user->hasAnyRole([
-                                    'super_admin',
-                                    'agent_transit',
-                                ])
-                            );
+                                    'super-admin',
+                                    'agent-transit',
+                                ]);
                         })
                         ->schema([
                             Section::make('Opérations portuaires')
@@ -206,8 +250,7 @@ protected static function saveRecord($livewire): void
                                             ->label('Valider étape')
                                             ->icon('heroicon-o-check-circle')
                                             ->color('success')
-                                            ->visible(fn($livewire) =>
-                                                $livewire->record &&
+                                            ->visible(fn ($livewire) => $livewire->record &&
                                                 $livewire->record->status_colis_port === 'SORTI'
                                             )
                                             ->action(function ($livewire) {
@@ -221,7 +264,7 @@ protected static function saveRecord($livewire): void
                                     ]),
                                 ]),
                         ])
-                        ->afterValidation(fn($livewire) => self::saveRecord($livewire)),
+                        ->afterValidation(fn ($livewire) => self::saveRecord($livewire)),
 
                     /* =====================================================
                      | STEP 3 - DOUANE
@@ -231,14 +274,15 @@ protected static function saveRecord($livewire): void
 
                             $user = auth()->user();
 
-                            if (!$user) return false;
+                            if (! $user) {
+                                return false;
+                            }
 
-                            return (
+                            return
                                 $user->hasAnyRole([
-                                    'super_admin',
-                                    'agent_transit',
-                                ])
-                            );
+                                    'super-admin',
+                                    'agent-transit',
+                                ]);
                         })
                         ->schema([
                             Section::make('Formalités douanières')
@@ -267,8 +311,7 @@ protected static function saveRecord($livewire): void
                                             ->label('Valider étape')
                                             ->icon('heroicon-o-check-circle')
                                             ->color('success')
-                                            ->visible(fn($livewire) =>
-                                                $livewire->record &&
+                                            ->visible(fn ($livewire) => $livewire->record &&
                                                 $livewire->record->status_colis_douane === 'SORTI'
                                             )
                                             ->action(function ($livewire) {
@@ -282,34 +325,36 @@ protected static function saveRecord($livewire): void
                                     ]),
                                 ]),
                         ])
-                        ->afterValidation(fn($livewire) => self::saveRecord($livewire)),
+                        ->afterValidation(fn ($livewire) => self::saveRecord($livewire)),
 
-                        
                     /*
                     |--------------------------------------------------------------------------
                     | STEP 4 : EXPERTISE
                     |--------------------------------------------------------------------------
                     */
                     Step::make('Expertise')
-                       ->visible(function ($get, $livewire) {
+                        ->visible(function ($get, $livewire) {
 
                             $user = auth()->user();
 
-                            if (!$user) return false;
+                            if (! $user) {
+                                return false;
+                            }
 
                             $typeId = $get('id_type_colis') ?? $livewire->record?->id_type_colis;
-                            if (!$typeId) return false;
+                            if (! $typeId) {
+                                return false;
+                            }
 
                             $type = TypeColis::find($typeId);
                             $isVehicule = $type && strcasecmp($type->nom, 'Véhicules') === 0;
 
-                            return (
+                            return
                                 $user->hasAnyRole([
-                                    'super_admin',
+                                    'super-admin',
                                     'expert',
                                 ])
-                                && $isVehicule
-                            );
+                                && $isVehicule;
                         })
                         ->schema(function ($get, $livewire) {
                             $typeId = $get('id_type_colis') ?? $livewire->record?->id_type_colis;
@@ -319,7 +364,7 @@ protected static function saveRecord($livewire): void
                             $user = auth()->user();
                             $canSeeMessage = $user?->hasAnyRole(['super-admin', 'expert']);
 
-                            if (!$isVehicule && $canSeeMessage) {
+                            if (! $isVehicule && $canSeeMessage) {
                                 return [
                                     Section::make('Expertise non requise')
                                         ->icon('heroicon-o-information-circle')
@@ -328,7 +373,7 @@ protected static function saveRecord($livewire): void
                                                 ->content(new HtmlString(
                                                     '<div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
                                                         <h3 class="text-sm font-semibold text-blue-800">
-                                                            Type de colis : ' . e($type?->nom ?? 'Conteneur') . '
+                                                            Type de colis : '.e($type?->nom ?? 'Conteneur').'
                                                         </h3>
                                                         <p class="text-sm text-blue-700 mt-2">
                                                             L\'expertise ONT est uniquement requise pour les colis 
@@ -415,23 +460,24 @@ protected static function saveRecord($livewire): void
                                 ]),
                             ];
                         })
-                        ->afterValidation(fn($livewire) => self::saveRecord($livewire)),
+                        ->afterValidation(fn ($livewire) => self::saveRecord($livewire)),
                     /* =====================================================
                      | STEP 4 - LIVRAISON
                      ===================================================== */
                     Step::make('Livraison')
-                                                               ->visible(function ($get, $livewire) {
+                        ->visible(function ($get, $livewire) {
 
                             $user = auth()->user();
 
-                            if (!$user) return false;
+                            if (! $user) {
+                                return false;
+                            }
 
-                            return (
+                            return
                                 $user->hasAnyRole([
-                                    'super_admin',
-                                    'agent_transit',
-                                ])
-                            );
+                                    'super-admin',
+                                    'agent-transit',
+                                ]);
                         })
                         ->schema([
                             Section::make('Livraison')
@@ -456,8 +502,7 @@ protected static function saveRecord($livewire): void
                                         Action::make('valider_livraison')
                                             ->label('Valider livraison')
                                             ->color('success')
-                                            ->visible(fn($livewire) =>
-                                                $livewire->record &&
+                                            ->visible(fn ($livewire) => $livewire->record &&
                                                 $livewire->record->status_colis_livraison === 'LIVRE'
                                             )
                                             ->action(function ($livewire) {
@@ -471,24 +516,25 @@ protected static function saveRecord($livewire): void
                                     ]),
                                 ]),
                         ])
-                        ->afterValidation(fn($livewire) => self::saveRecord($livewire)),
+                        ->afterValidation(fn ($livewire) => self::saveRecord($livewire)),
 
                     /* =====================================================
                      | STEP 5 - FINALISATION
                      ===================================================== */
                     Step::make('Finalisation')
-                                                               ->visible(function ($get, $livewire) {
+                        ->visible(function ($get, $livewire) {
 
                             $user = auth()->user();
 
-                            if (!$user) return false;
+                            if (! $user) {
+                                return false;
+                            }
 
-                            return (
+                            return
                                 $user->hasAnyRole([
-                                    'super_admin',
-                                    'agent_transit',
-                                ])
-                            );
+                                    'super-admin',
+                                    'agent-transit',
+                                ]);
                         })
                         ->schema([
                             Section::make('Clôture')
@@ -504,8 +550,7 @@ protected static function saveRecord($livewire): void
                                         Action::make('cloturer')
                                             ->label('Clôturer dossier')
                                             ->color('success')
-                                            ->visible(fn($livewire) =>
-                                                $livewire->record &&
+                                            ->visible(fn ($livewire) => $livewire->record &&
                                                 $livewire->record->status === 'TERMINE'
                                             )
                                             ->action(function ($livewire) {
@@ -523,10 +568,10 @@ protected static function saveRecord($livewire): void
                                     ]),
                                 ]),
                         ])
-                        ->afterValidation(fn($livewire) => self::saveRecord($livewire)),
+                        ->afterValidation(fn ($livewire) => self::saveRecord($livewire)),
                 ])
-                ->persistStepInQueryString('step')
-                ->columnSpanFull(),
+                    ->persistStepInQueryString('step')
+                    ->columnSpanFull(),
             ]);
     }
 }

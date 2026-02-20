@@ -22,7 +22,7 @@ class RapportClients extends Page
 
         public static function canAccess(): bool
     {
-        return auth()->user()->can('View:$RapportClients');
+        return auth()->user()->can('View:RapportClients');
     }
 
     protected function getHeaderWidgets(): array
