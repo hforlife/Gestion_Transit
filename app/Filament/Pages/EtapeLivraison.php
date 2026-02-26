@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Models\Colis;
+use App\Filament\Traits\HasExports;
 use Filament\Pages\Page;
 use Filament\Tables\Table;
 use Filament\Tables\Contracts\HasTable;
@@ -13,40 +14,32 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\DatePicker;
 use Filament\Schemas\Components\Grid;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\Toggle;
-use Filament\Forms\Components\Repeater;
 use Illuminate\Database\Eloquent\Builder;
-use BackedEnum;
 use UnitEnum;
-use Filament\Support\Icons\Heroicon;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\BulkAction;
-use Filament\Tables\Tab; // ✅ IMPORT AJOUTÉ
+use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Notifications\Notification;
+use Carbon\Carbon;
 
 class EtapeLivraison extends Page implements HasTable
 {
-    use InteractsWithTable;
+    use InteractsWithTable, HasExports;
 
-    // protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-truck';
-    
     protected static ?string $navigationLabel = 'Livraison';
-    
     protected static ?string $title = 'Gestion des Colis - Étape Livraison';
-    
     protected static ?string $slug = 'etape-livraison';
-    
     protected static string | UnitEnum | null $navigationGroup = 'Colis';
-    
     protected static ?int $navigationSort = 7;
-
     protected string $view = 'filament.pages.etape-livraison';
 
-        public static function canAccess(): bool
+    public static function canAccess(): bool
     {
         return auth()->user()->can('View:EtapeLivraison');
     }
@@ -79,7 +72,7 @@ class EtapeLivraison extends Page implements HasTable
         return $table
             ->query(
                 Colis::query()
-                    ->with(['typeColis', 'client', 'agent', 'port'])
+                    ->with(['typeColis', 'dossierTransit.client', 'agent', 'port'])
                     ->whereNotNull('status_colis_livraison')
             )
             ->columns([
@@ -94,7 +87,7 @@ class EtapeLivraison extends Page implements HasTable
                     ->description(fn ($record) => $record->description)
                     ->toggleable(),
 
-                TextColumn::make('client.nom')
+                TextColumn::make('dossierTransit.client.nom')
                     ->label('Client')
                     ->sortable()
                     ->searchable()
@@ -158,24 +151,32 @@ class EtapeLivraison extends Page implements HasTable
                     )
                     ->toggleable(),
 
-                // Délai de livraison (optionnel)
-                // TextColumn::make('delai_livraison')
-                //     ->label('Délai')
-                //     ->formatStateUsing(function ($record) {
-                //         if (!$record->created_at || !$record->date_livraison) {
-                //             return 'N/A';
-                //         }
+                // Délai de livraison
+                TextColumn::make('delai_livraison')
+                    ->label('Délai')
+                    ->getStateUsing(function ($record) {
+                        if (!$record->created_at || !$record->date_livraison) {
+                            return 'N/A';
+                        }
                         
-                //         $jours = $record->created_at->diffInDays($record->date_livraison);
-                //         return $jours . ' jour' . ($jours > 1 ? 's' : '');
-                //     })
-                //     ->badge()
-                //     ->color(fn ($record) => 
-                //         $record->created_at && $record->date_livraison
-                //             ? ($record->created_at->diffInDays($record->date_livraison) > 7 ? 'danger' : 'success')
-                //             : 'gray'
-                //     )
-                //     ->toggleable(),
+                        $created = $record->created_at instanceof Carbon 
+                            ? $record->created_at 
+                            : Carbon::parse($record->created_at);
+                        
+                        $livree = $record->date_livraison instanceof Carbon 
+                            ? $record->date_livraison 
+                            : Carbon::parse($record->date_livraison);
+                        
+                        $jours = (int) $created->diffInDays($livree);
+                        return $jours . ' jour' . ($jours > 1 ? 's' : '');
+                    })
+                    ->badge()
+                    ->color(fn ($state) => 
+                        $state !== 'N/A' && (int) filter_var($state, FILTER_SANITIZE_NUMBER_INT) > 7 
+                            ? 'danger' 
+                            : 'success'
+                    )
+                    ->toggleable(),
 
                 TextColumn::make('created_at')
                     ->label('Créé le')
@@ -227,7 +228,7 @@ class EtapeLivraison extends Page implements HasTable
 
                 SelectFilter::make('client_id')
                     ->label('Client')
-                    ->relationship('client', 'nom')
+                    ->relationship('dossierTransit.client', 'nom')
                     ->searchable()
                     ->preload()
                     ->multiple(),
@@ -238,92 +239,102 @@ class EtapeLivraison extends Page implements HasTable
                     ->toggle(),
             ], layout: FiltersLayout::AboveContent)
             ->actions([
-                Action::make('voir')
-                    ->label('Détails complets')
-                    ->icon('heroicon-o-eye')
-                    ->url(fn (Colis $record): string => \App\Filament\Resources\Colis\ColisResource::getUrl('view', ['record' => $record]))
-                    ->color('info')
-                    ->openUrlInNewTab(false),
+                ActionGroup::make([
 
-                Action::make('gerer_livraison')
-                    ->label('Gérer livraison')
-                    ->icon('heroicon-o-truck')
-                    ->color('primary')
-                    ->action(function (Colis $record, array $data) {
-                        $updateData = [
-                            'status_colis_livraison' => $data['status_colis_livraison'],
-                            'date_livraison' => $data['date_livraison'] ?? null,
-                            'commentaires_cloture' => $data['commentaires_cloture'] ?? null,
-                        ];
+                    // Détails complets
+                    Action::make('voir')
+                        ->label('Détails complets')
+                        ->icon('heroicon-o-eye')
+                        ->url(fn (Colis $record): string => 
+                            \App\Filament\Resources\Colis\ColisResource::getUrl('view', ['record' => $record])
+                        )
+                        ->color('info')
+                        ->openUrlInNewTab(false),
 
-                        // Si livré, mettre à jour l'état du colis
-                        if ($data['status_colis_livraison'] === 'LIVRE') {
-                            $updateData['etat_colis'] = 'LIVRE';
-                        }
+                    // ✅ IMPRESSION BON DE LIVRAISON (via trait)
+                    $this->getPrintAction('pdf.etape-livraison', 'Imprimer bon de livraison'),
 
-                        $record->update($updateData);
+                    // Gérer livraison
+                    Action::make('gerer_livraison')
+                        ->label('Gérer livraison')
+                        ->icon('heroicon-o-truck')
+                        ->color('primary')
+                        ->action(function (Colis $record, array $data) {
+                            $updateData = [
+                                'status_colis_livraison' => $data['status_colis_livraison'],
+                                'date_livraison' => $data['date_livraison'] ?? null,
+                                'commentaires_cloture' => $data['commentaires_cloture'] ?? null,
+                            ];
 
-                        // ✅ LOG SIMPLE - activity() retiré
-                        // Optionnel : logger dans les logs Laravel
-                        \Illuminate\Support\Facades\Log::info('Livraison mise à jour', [
-                            'colis_id' => $record->id,
-                            'user_id' => auth()->id(),
-                            'data' => $data
-                        ]);
-                    })
-                    ->form([
-                        Grid::make(2)->schema([
-                            Select::make('status_colis_livraison')
-                                ->label('Statut livraison')
-                                ->options([
-                                    'EN_ATTENTE' => 'En préparation',
-                                    'LIVRE' => 'Livré',
-                                ])
-                                ->required()
-                                ->native(false)
-                                ->live()
-                                ->afterStateUpdated(fn ($set, $state) => 
-                                    $state === 'LIVRE' ? $set('date_livraison', now()) : null
-                                ),
+                            if ($data['status_colis_livraison'] === 'LIVRE') {
+                                $updateData['etat_colis'] = 'LIVRE';
+                            }
 
-                            DatePicker::make('date_livraison')
-                                ->label('Date livraison')
-                                ->native(false)
-                                ->displayFormat('d/m/Y H:i')
-                                ->seconds(false)
-                                ->required(fn ($get) => $get('status_colis_livraison') === 'LIVRE'),
+                            $record->update($updateData);
 
-                            Textarea::make('commentaires_cloture')
-                                ->label('Commentaires')
-                                ->placeholder('Ajouter des commentaires sur la livraison...')
-                                ->rows(3)
-                                ->columnSpanFull(),
-                        ]),
-                    ])
-                    ->modalHeading('Gestion de la livraison')
-                    ->modalButton('Enregistrer')
-                    ->modalWidth('lg'),
+                            Notification::make()
+                                ->title('Livraison mise à jour')
+                                ->success()
+                                ->send();
+                        })
+                        ->form([
+                            Grid::make(2)->schema([
+                                Select::make('status_colis_livraison')
+                                    ->label('Statut livraison')
+                                    ->options([
+                                        'EN_ATTENTE' => 'En préparation',
+                                        'LIVRE' => 'Livré',
+                                    ])
+                                    ->required()
+                                    ->native(false)
+                                    ->live()
+                                    ->afterStateUpdated(fn ($set, $state) => 
+                                        $state === 'LIVRE' ? $set('date_livraison', now()) : null
+                                    ),
 
-                Action::make('marquer_livre')
-                    ->label('Marquer livré')
-                    ->icon('heroicon-o-check-circle')
-                    ->color('success')
-                    ->visible(fn (Colis $record): bool => 
-                        $record->status_colis_livraison !== 'LIVRE'
-                    )
-                    ->action(function (Colis $record) {
-                        $record->update([
-                            'status_colis_livraison' => 'LIVRE',
-                            'date_livraison' => now(),
-                            'etat_colis' => 'LIVRE',
-                        ]);
-                    })
-                    ->requiresConfirmation()
-                    ->modalHeading('Confirmer la livraison')
-                    ->modalDescription('Êtes-vous sûr de vouloir marquer ce colis comme livré ?')
-                    ->modalSubmitActionLabel('Oui, marquer livré'),
+                                DatePicker::make('date_livraison')
+                                    ->label('Date livraison')
+                                    ->native(false)
+                                    ->displayFormat('d/m/Y H:i')
+                                    ->seconds(false)
+                                    ->required(fn ($get) => $get('status_colis_livraison') === 'LIVRE'),
 
-                // Actions optionnelles commentées...
+                                Textarea::make('commentaires_cloture')
+                                    ->label('Commentaires')
+                                    ->placeholder('Ajouter des commentaires sur la livraison...')
+                                    ->rows(3)
+                                    ->columnSpanFull(),
+                            ]),
+                        ])
+                        ->modalHeading('Gestion de la livraison')
+                        ->modalButton('Enregistrer')
+                        ->modalWidth('lg'),
+
+                    // Marquer livré
+                    Action::make('marquer_livre')
+                        ->label('Marquer livré')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->visible(fn (Colis $record): bool => 
+                            $record->status_colis_livraison !== 'LIVRE'
+                        )
+                        ->action(function (Colis $record) {
+                            $record->update([
+                                'status_colis_livraison' => 'LIVRE',
+                                'date_livraison' => now(),
+                                'etat_colis' => 'LIVRE',
+                            ]);
+
+                            Notification::make()
+                                ->title('Colis marqué comme livré')
+                                ->success()
+                                ->send();
+                        })
+                        ->requiresConfirmation()
+                        ->modalHeading('Confirmer la livraison')
+                        ->modalDescription('Êtes-vous sûr de vouloir marquer ce colis comme livré ?')
+                        ->modalSubmitActionLabel('Oui, marquer livré'),
+                ]),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
@@ -338,15 +349,46 @@ class EtapeLivraison extends Page implements HasTable
                                     'etat_colis' => 'LIVRE',
                                 ]);
                             }
+
+                            Notification::make()
+                                ->title('Opération effectuée')
+                                ->body(count($records) . ' colis marqués comme livrés')
+                                ->success()
+                                ->send();
                         })
                         ->requiresConfirmation()
                         ->deselectRecordsAfterCompletion(),
 
-                    BulkAction::make('exporter_livraisons')
-                        ->label('Exporter')
-                        ->icon('heroicon-o-arrow-down-tray')
+                    BulkAction::make('exporter_csv_bulk')
+                        ->label('Exporter sélection (CSV)')
+                        ->icon('heroicon-o-document-arrow-down')
+                        ->color('success')
                         ->action(function ($records) {
-                            // Logique d'export CSV des livraisons
+                            $headers = [
+                                'Content-Type' => 'text/csv',
+                                'Content-Disposition' => 'attachment; filename="Livraison-selection-' . now()->format('Y-m-d') . '.csv"',
+                            ];
+
+                            $callback = function() use ($records) {
+                                $file = fopen('php://output', 'w');
+                                
+                                fputcsv($file, ['N° BL', 'Client', 'Type', 'Statut', 'Date livraison', 'Commentaires']);
+                                
+                                foreach ($records as $record) {
+                                    fputcsv($file, [
+                                        $record->numero_bl,
+                                        $record->dossierTransit?->client?->nom ?? 'N/A',
+                                        $record->typeColis?->nom ?? 'N/A',
+                                        $record->status_colis_livraison ?? 'N/A',
+                                        $record->date_livraison ? Carbon::parse($record->date_livraison)->format('d/m/Y H:i') : 'N/A',
+                                        $record->commentaires_cloture ?? 'N/A',
+                                    ]);
+                                }
+                                
+                                fclose($file);
+                            };
+
+                            return response()->stream($callback, 200, $headers);
                         }),
                 ]),
             ])

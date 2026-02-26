@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Models\Colis;
+use App\Filament\Traits\HasExports;
 use Filament\Pages\Page;
 use Filament\Tables\Table;
 use Filament\Tables\Contracts\HasTable;
@@ -13,32 +14,24 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Forms\Components\DatePicker;
 use Illuminate\Database\Eloquent\Builder;
-use BackedEnum;
 use UnitEnum;
-use Filament\Support\Icons\Heroicon;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Tables\Tab;
-use Carbon\Carbon; // ✅ IMPORT AJOUTÉ
+use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Notifications\Notification;
+use Carbon\Carbon;
 
 class EtapePort extends Page implements HasTable
 {
-    use InteractsWithTable;
+    use InteractsWithTable, HasExports;
 
-    // static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBox;
-    
     protected static ?string $navigationLabel = 'Port';
-    
     protected static ?string $title = 'Gestion des Colis - Étape Port';
-    
     protected static ?string $slug = 'etape-port';
-    
     protected static string | UnitEnum | null $navigationGroup = 'Colis';
-    
     protected static ?int $navigationSort = 4;
-
     protected string $view = 'filament.pages.etape-port';
 
     public static function canAccess(): bool
@@ -89,8 +82,8 @@ class EtapePort extends Page implements HasTable
         return $table
             ->query(
                 Colis::query()
-                    ->with(['typeColis', 'client', 'agent', 'port'])
-                    ->whereHas('port') // Uniquement les colis avec un port assigné
+                    ->with(['typeColis', 'dossierTransit.client', 'agent', 'port'])
+                    ->whereHas('port')
             )
             ->columns([
                 // Informations principales du colis
@@ -115,7 +108,7 @@ class EtapePort extends Page implements HasTable
                     ->searchable()
                     ->toggleable(),
 
-                TextColumn::make('client.nom')
+                TextColumn::make('dossierTransit.client.nom')
                     ->label('Client')
                     ->sortable()
                     ->searchable()
@@ -168,7 +161,7 @@ class EtapePort extends Page implements HasTable
                     ->placeholder('Non renseignée')
                     ->toggleable(),
 
-                // ✅ CORRECTION: Durée de séjour au port
+                // Durée de séjour au port
                 TextColumn::make('duree_sejour')
                     ->label('Durée séjour')
                     ->getStateUsing(function ($record) {
@@ -176,7 +169,6 @@ class EtapePort extends Page implements HasTable
                             return null;
                         }
                         
-                        // Convertir en objet Carbon si c'est une string
                         $dateEntree = $record->date_entree_port instanceof Carbon 
                             ? $record->date_entree_port 
                             : Carbon::parse($record->date_entree_port);
@@ -199,7 +191,6 @@ class EtapePort extends Page implements HasTable
                     ->color(function ($state) {
                         if (!$state) return 'gray';
                         
-                        // Extraire le nombre de jours si présent
                         if (str_contains($state, '<')) return 'warning';
                         
                         $jours = (int) filter_var($state, FILTER_SANITIZE_NUMBER_INT);
@@ -238,7 +229,7 @@ class EtapePort extends Page implements HasTable
 
                 SelectFilter::make('client_id')
                     ->label('Client')
-                    ->relationship('client', 'nom')
+                    ->relationship('dossierTransit.client', 'nom')
                     ->searchable()
                     ->preload()
                     ->multiple(),
@@ -304,72 +295,85 @@ class EtapePort extends Page implements HasTable
                     ->toggle(),
             ], layout: FiltersLayout::AboveContent)
             ->actions([
-                Action::make('voir')
-                    ->label('Détails complets')
-                    ->icon('heroicon-o-eye')
-                    ->url(fn (Colis $record): string => \App\Filament\Resources\Colis\ColisResource::getUrl('view', ['record' => $record]))
-                    ->color('info')
-                    ->openUrlInNewTab(false),
+                ActionGroup::make([
 
-                Action::make('mettre_a_jour_port')
-                    ->label('Mettre à jour')
-                    ->icon('heroicon-o-pencil')
-                    ->color('warning')
-                    ->action(function (Colis $record, array $data) {
-                        $updateData = [
-                            'status_colis_port' => $data['status_colis_port'],
-                        ];
+                    // Détails complets
+                    Action::make('voir')
+                        ->label('Détails complets')
+                        ->icon('heroicon-o-eye')
+                        ->url(fn (Colis $record): string => 
+                            \App\Filament\Resources\Colis\ColisResource::getUrl('view', ['record' => $record])
+                        )
+                        ->color('info')
+                        ->openUrlInNewTab(false),
 
-                        if (isset($data['date_entree_port'])) {
-                            $updateData['date_entree_port'] = $data['date_entree_port'];
-                        }
+                    // ✅ IMPRESSION FICHE PORT (via trait)
+                    $this->getPrintAction('pdf.etape-port', 'Imprimer fiche port'),
 
-                        if (isset($data['date_sortie_port'])) {
-                            $updateData['date_sortie_port'] = $data['date_sortie_port'];
-                        }
+                    // Mise à jour port
+                    Action::make('mettre_a_jour_port')
+                        ->label('Mettre à jour')
+                        ->icon('heroicon-o-pencil')
+                        ->color('warning')
+                        ->action(function (Colis $record, array $data) {
+                            $updateData = [
+                                'status_colis_port' => $data['status_colis_port'],
+                            ];
 
-                        // Mise à jour automatique de l'état global
-                        if ($data['status_colis_port'] === 'SORTI') {
-                            $updateData['etat_colis'] = 'A_LA_DOUANE';
-                        }
+                            if (isset($data['date_entree_port'])) {
+                                $updateData['date_entree_port'] = $data['date_entree_port'];
+                            }
 
-                        $record->update($updateData);
-                    })
-                    ->form([
-                        \Filament\Schemas\Components\Grid::make(2)->schema([
-                            \Filament\Forms\Components\Select::make('status_colis_port')
-                                ->label('Statut au port')
-                                ->options([
-                                    'EN_ATTENTE' => 'En attente',
-                                    'ENTRE' => 'Entré',
-                                    'SORTI' => 'Sorti',
-                                ])
-                                ->required()
-                                ->live()
-                                ->afterStateUpdated(function ($state, callable $set) {
-                                    if ($state === 'ENTRE') {
-                                        $set('date_entree_port', now());
-                                    }
-                                }),
+                            if (isset($data['date_sortie_port'])) {
+                                $updateData['date_sortie_port'] = $data['date_sortie_port'];
+                            }
 
-                            DatePicker::make('date_entree_port')
-                                ->label('Date entrée')
-                                ->native(false)
-                                ->displayFormat('d/m/Y')
-                                ->required(fn ($get) => $get('status_colis_port') === 'ENTRE' || $get('status_colis_port') === 'SORTI'),
+                            if ($data['status_colis_port'] === 'SORTI') {
+                                $updateData['etat_colis'] = 'A_LA_DOUANE';
+                            }
 
-                            DatePicker::make('date_sortie_port')
-                                ->label('Date sortie')
-                                ->native(false)
-                                ->displayFormat('d/m/Y')
-                                ->afterOrEqual('date_entree_port')
-                                ->required(fn ($get) => $get('status_colis_port') === 'SORTI'),
-                        ]),
-                    ])
-                    ->modalHeading('Mettre à jour les informations port')
-                    ->modalButton('Enregistrer')
-                    ->modalWidth('lg'),
+                            $record->update($updateData);
 
+                            Notification::make()
+                                ->title('Mise à jour effectuée')
+                                ->success()
+                                ->send();
+                        })
+                        ->form([
+                            \Filament\Schemas\Components\Grid::make(2)->schema([
+                                \Filament\Forms\Components\Select::make('status_colis_port')
+                                    ->label('Statut au port')
+                                    ->options([
+                                        'EN_ATTENTE' => 'En attente',
+                                        'ENTRE' => 'Entré',
+                                        'SORTI' => 'Sorti',
+                                    ])
+                                    ->required()
+                                    ->live()
+                                    ->afterStateUpdated(function ($state, callable $set) {
+                                        if ($state === 'ENTRE') {
+                                            $set('date_entree_port', now());
+                                        }
+                                    }),
+
+                                DatePicker::make('date_entree_port')
+                                    ->label('Date entrée')
+                                    ->native(false)
+                                    ->displayFormat('d/m/Y')
+                                    ->required(fn ($get) => $get('status_colis_port') === 'ENTRE' || $get('status_colis_port') === 'SORTI'),
+
+                                DatePicker::make('date_sortie_port')
+                                    ->label('Date sortie')
+                                    ->native(false)
+                                    ->displayFormat('d/m/Y')
+                                    ->afterOrEqual('date_entree_port')
+                                    ->required(fn ($get) => $get('status_colis_port') === 'SORTI'),
+                            ]),
+                        ])
+                        ->modalHeading('Mettre à jour les informations port')
+                        ->modalButton('Enregistrer')
+                        ->modalWidth('lg'),
+                ]),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
@@ -384,6 +388,12 @@ class EtapePort extends Page implements HasTable
                                     'date_entree_port' => now(),
                                 ]);
                             }
+
+                            Notification::make()
+                                ->title('Opération effectuée')
+                                ->body(count($records) . ' colis marqués comme entrés au port')
+                                ->success()
+                                ->send();
                         })
                         ->requiresConfirmation()
                         ->deselectRecordsAfterCompletion(),
@@ -400,9 +410,56 @@ class EtapePort extends Page implements HasTable
                                     'etat_colis' => 'A_LA_DOUANE',
                                 ]);
                             }
+
+                            Notification::make()
+                                ->title('Opération effectuée')
+                                ->body(count($records) . ' colis marqués comme sortis du port')
+                                ->success()
+                                ->send();
                         })
                         ->requiresConfirmation()
                         ->deselectRecordsAfterCompletion(),
+
+                    BulkAction::make('export_csv_bulk')
+                        ->label('Exporter sélection (CSV)')
+                        ->icon('heroicon-o-document-arrow-down')
+                        ->color('success')
+                        ->action(function ($records) {
+                            $headers = [
+                                'Content-Type' => 'text/csv',
+                                'Content-Disposition' => 'attachment; filename="Port-selection-' . now()->format('Y-m-d') . '.csv"',
+                            ];
+
+                            $callback = function() use ($records) {
+                                $file = fopen('php://output', 'w');
+                                
+                                fputcsv($file, ['N° BL', 'Client', 'Type', 'Port', 'Statut', 'Entrée', 'Sortie', 'Durée']);
+                                
+                                foreach ($records as $record) {
+                                    $dateEntree = $record->date_entree_port ? Carbon::parse($record->date_entree_port) : null;
+                                    $dateSortie = $record->date_sortie_port ? Carbon::parse($record->date_sortie_port) : null;
+                                    
+                                    $duree = $dateEntree && $dateSortie 
+                                        ? $dateEntree->diffInDays($dateSortie) . ' jours'
+                                        : ($dateEntree ? 'En cours' : 'N/A');
+                                    
+                                    fputcsv($file, [
+                                        $record->numero_bl,
+                                        $record->dossierTransit?->client?->nom ?? 'N/A',
+                                        $record->typeColis?->nom ?? 'N/A',
+                                        $record->port?->nom ?? 'N/A',
+                                        $record->status_colis_port ?? 'N/A',
+                                        $dateEntree?->format('d/m/Y') ?? 'N/A',
+                                        $dateSortie?->format('d/m/Y') ?? 'N/A',
+                                        $duree,
+                                    ]);
+                                }
+                                
+                                fclose($file);
+                            };
+
+                            return response()->stream($callback, 200, $headers);
+                        }),
                 ]),
             ])
             ->defaultSort('created_at', 'desc')

@@ -13,13 +13,19 @@ use App\Filament\Resources\Colis\ColisResource;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
 use Illuminate\Database\Eloquent\Builder;
+use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
+use Barryvdh\DomPDF\Facade\Pdf;
+use App\Filament\Traits\HasExports;
 
 class ColisTable
 {
+    use HasExports;
     public static function configure(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) =>
+            ->modifyQueryUsing(
+                fn(Builder $query) =>
                 $query->with([
                     'typeColis',
                     'dossierTransit.client',
@@ -41,13 +47,14 @@ class ColisTable
                     ->sortable()
                     ->copyable()
                     ->weight('bold')
-                    ->description(fn ($record) => $record->description)
+                    ->description(fn($record) => $record->description)
                     ->limit(20),
 
                 TextColumn::make('typeColis.nom')
                     ->label('Type')
                     ->badge()
-                    ->color(fn ($state) =>
+                    ->color(
+                        fn($state) =>
                         $state === 'Chassis' ? 'warning' : 'primary'
                     )
                     ->sortable(),
@@ -69,7 +76,7 @@ class ColisTable
                 TextColumn::make('status_colis_port')
                     ->label('Port')
                     ->badge()
-                    ->color(fn ($state) => match ($state) {
+                    ->color(fn($state) => match ($state) {
                         'EN_ATTENTE' => 'secondary',
                         'ENTRE' => 'warning',
                         'SORTI' => 'success',
@@ -89,7 +96,7 @@ class ColisTable
                 TextColumn::make('status_colis_douane')
                     ->label('Douane')
                     ->badge()
-                    ->color(fn ($state) => match ($state) {
+                    ->color(fn($state) => match ($state) {
                         'EN_ATTENTE' => 'secondary',
                         'ENTRE' => 'warning',
                         'SORTI' => 'success',
@@ -100,7 +107,8 @@ class ColisTable
                     ->label('T1')
                     ->badge()
                     ->copyable()
-                    ->color(fn ($state) =>
+                    ->color(
+                        fn($state) =>
                         filled($state) ? 'success' : 'secondary'
                     )
                     ->toggleable(),
@@ -108,7 +116,8 @@ class ColisTable
                 TextColumn::make('etat_t1')
                     ->label('État T1')
                     ->badge()
-                    ->color(fn ($state) =>
+                    ->color(
+                        fn($state) =>
                         $state === 'PAYE' ? 'success' : 'secondary'
                     )
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -120,7 +129,8 @@ class ColisTable
                 TextColumn::make('etat_expertise')
                     ->label('Expertise')
                     ->badge()
-                    ->color(fn ($state) =>
+                    ->color(
+                        fn($state) =>
                         $state === 'EFFECTUEE' ? 'success' : 'danger'
                     )
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -128,7 +138,7 @@ class ColisTable
                 TextColumn::make('etat_pvc')
                     ->label('PVC')
                     ->badge()
-                    ->color(fn ($state) => match ($state) {
+                    ->color(fn($state) => match ($state) {
                         'NON_RECU' => 'secondary',
                         'RECU' => 'warning',
                         'PAYE' => 'success',
@@ -139,7 +149,8 @@ class ColisTable
                 TextColumn::make('etat_ae')
                     ->label('AE')
                     ->badge()
-                    ->color(fn ($state) =>
+                    ->color(
+                        fn($state) =>
                         $state === 'VALIDE' ? 'success' : 'danger'
                     )
                     ->toggleable(),
@@ -147,7 +158,8 @@ class ColisTable
                 TextColumn::make('etat_cmc')
                     ->label('CMC')
                     ->badge()
-                    ->color(fn ($state) =>
+                    ->color(
+                        fn($state) =>
                         $state === 'RECU' ? 'success' : 'secondary'
                     )
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -159,14 +171,16 @@ class ColisTable
                 TextColumn::make('status')
                     ->label('Clôture')
                     ->badge()
-                    ->color(fn ($state) =>
+                    ->color(
+                        fn($state) =>
                         $state === 'TERMINE' ? 'success' : 'warning'
                     ),
 
                 IconColumn::make('is_late')
                     ->label('Retard')
                     ->boolean()
-                    ->getStateUsing(fn ($record) =>
+                    ->getStateUsing(
+                        fn($record) =>
                         $record->status !== 'TERMINE'
                         && $record->created_at->diffInDays(now()) > 15
                     )
@@ -202,57 +216,24 @@ class ColisTable
 
                 Filter::make('expertise_en_cours')
                     ->label('Expertise en cours')
-                    ->query(fn (Builder $query) =>
+                    ->query(
+                        fn(Builder $query) =>
                         $query->where('etat_pvc', 'PAYE')
-                              ->where(function ($q) {
-                                  $q->where('etat_ae', 'NON_VALIDE')
+                            ->where(function ($q) {
+                                $q->where('etat_ae', 'NON_VALIDE')
                                     ->orWhere('etat_cmc', 'NON_RECU');
-                              })
+                            })
                     )
                     ->toggle(),
 
             ])
 
             ->defaultSort('created_at', 'desc')
-
-            ->recordActions([
-
-                /* ===============================
-                 |  VIEW ACTION
-                 ===============================*/
-                ViewAction::make('view'),
-
-                /* ===============================
-                 |  EDIT ACTION
-                 ===============================*/
-                EditAction::make()
-                    ->visible(fn ($record) =>
-                        $record->status !== 'TERMINE'
-                    )
-                    ->url(function ($record) {
-
-                        $step = match ($record->etat_colis) {
-                            'BL_ENREGISTRE' => 'Enregistrement',
-                            'A_LA_DOUANE'   => 'Port',
-                            'EN_ROUTE'      => 'Douane',
-                            'LIVRE'         => 'Livraison',
-                            'CLOTURE'       => 'Finalisation',
-                            default         => 'Enregistrement',
-                        };
-
-                        return ColisResource::getUrl('edit', [
-                            'record' => $record,
-                            'step'   => $step,
-                        ]);
-                    }),
-
-
-            ])
-
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
-                        ->visible(fn () =>
+                        ->visible(
+                            fn() =>
                             auth()->user()?->hasRole('super_admin')
                         ),
                 ]),
