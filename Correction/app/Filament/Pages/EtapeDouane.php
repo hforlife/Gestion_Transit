@@ -25,11 +25,10 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Schemas\Components\Tabs\Tab;
 use UnitEnum;
 use Filament\Notifications\Notification;
-use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 
 class EtapeDouane extends Page implements HasTable
 {
-    use InteractsWithTable, HasExports, HasPageShield;
+    use InteractsWithTable, HasExports;
 
     protected static ?string $navigationLabel = 'Douane';
     protected static ?string $title = 'Gestion des Colis - Étape Douane';
@@ -303,7 +302,7 @@ class EtapeDouane extends Page implements HasTable
                     Action::make('voir')
                         ->label('Détails complets')
                         ->icon('heroicon-o-eye')
-                        ->url(fn (Colis $record): string =>
+                        ->url(fn (Colis $record): string => 
                             \App\Filament\Resources\Colis\ColisResource::getUrl('view', ['record' => $record])
                         )
                         ->color('info'),
@@ -402,10 +401,10 @@ class EtapeDouane extends Page implements HasTable
 
                             $callback = function() use ($records) {
                                 $file = fopen('php://output', 'w');
-
+                                
                                 // En-têtes
                                 fputcsv($file, ['N° BL', 'Client', 'Type', 'Statut', 'N° T1', 'Déclaration', 'Entrée', 'Sortie']);
-
+                                
                                 foreach ($records as $record) {
                                     fputcsv($file, [
                                         $record->numero_bl,
@@ -418,7 +417,7 @@ class EtapeDouane extends Page implements HasTable
                                         $record->date_sortie_douane ? \Carbon\Carbon::parse($record->date_sortie_douane)->format('d/m/Y') : 'N/A',
                                     ]);
                                 }
-
+                                
                                 fclose($file);
                             };
 

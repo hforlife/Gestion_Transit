@@ -4,15 +4,23 @@ namespace App\Filament\Resources\Colis\Tables;
 
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Table;
+use App\Filament\Resources\Colis\ColisResource;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
 use Illuminate\Database\Eloquent\Builder;
+use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
+use Barryvdh\DomPDF\Facade\Pdf;
+use App\Filament\Traits\HasExports;
 
 class ColisTable
 {
+    use HasExports;
     public static function configure(Table $table): Table
     {
         return $table
@@ -47,7 +55,7 @@ class ColisTable
                     ->badge()
                     ->color(
                         fn($state) =>
-                        $state === 'Véhicules' ? 'warning' : 'primary'
+                        $state === 'Chassis' ? 'warning' : 'primary'
                     )
                     ->sortable(),
 

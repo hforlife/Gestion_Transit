@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Colis\Pages;
 
 use App\Filament\Resources\Colis\ColisResource;
+use App\Filament\Traits\HasExports;
 use App\Models\Colis;
 use Filament\Actions;
 use Filament\Resources\Pages\ViewRecord;
@@ -15,19 +16,33 @@ use Filament\Schemas\Schema;
 
 class ViewColis extends ViewRecord
 {
+    use HasExports;
     protected static string $resource = ColisResource::class;
 
-    // protected function getHeaderActions(): array
-    // {
-    //     return [
-    //         Actions\EditAction::make()
-    //             ->visible(fn ($record) => $record->etat_colis !== 'CLOTURE'),
-    //         Actions\Action::make('tracking')
-    //             ->label('Suivi complet')
-    //             ->icon('heroicon-o-clock')
-    //             ->url(fn ($record) => ColisResource::getUrl('tracking', ['record' => $record])),
-    //     ];
-    // }
+protected function getHeaderActions(): array
+    {
+        return [
+            Actions\EditAction::make()
+                ->visible(fn ($record) => $record->etat_colis !== 'CLOTURE'),
+
+            // ✅ CORRECTION : Action d'impression directe
+            Actions\Action::make('print_recap')
+                ->label('Imprimer')
+                ->icon('heroicon-o-printer')
+                ->color('gray')
+                ->action(function () {
+                    $record = $this->getRecord();
+
+                    // ✅ Utilisation directe de generateColisPDF du trait
+                    $pdf = $this->generateColisPDF($record, 'pdf.recap-complet');
+
+                    return response()->streamDownload(
+                        fn () => print($pdf->output()),
+                        $this->getFilename($record, 'pdf.recap-complet') . '.pdf'
+                    );
+                }),
+        ];
+    }
 
     public function infolist(Schema $schema): Schema
     {
@@ -48,16 +63,16 @@ class ViewColis extends ViewRecord
                                                 ->weight('bold')
                                                 ->color('primary')
                                                 ->size('lg'),
-                                                
+
                                             TextEntry::make('typeColis.nom')
                                                 ->label('Type de colis')
                                                 ->badge()
-                                                ->color(fn ($record) => 
-                                                    str_contains(strtolower($record->typeColis?->nom ?? ''), 'chassis') 
-                                                        ? 'warning' 
+                                                ->color(fn ($record) =>
+                                                    str_contains(strtolower($record->typeColis?->nom ?? ''), 'Véhicules')
+                                                        ? 'warning'
                                                         : 'primary'
                                                 ),
-                                                
+
                                             TextEntry::make('etat_colis')
                                                 ->label('Statut global')
                                                 ->badge()
@@ -82,29 +97,28 @@ class ViewColis extends ViewRecord
                                                     default => 'secondary',
                                                 }),
                                         ]),
-                                        
+
                                         Grid::make(3)->schema([
                                             TextEntry::make('dossierTransit.client.nom')
                                                 ->label('Client')
                                                 ->icon('heroicon-o-user')
-                                                // ->url(fn ($record) => \App\Filament\Resources\Clients\ClientResource::getUrl('edit', ['record' => $record->client_id]))
                                                 ->openUrlInNewTab(),
-                                                
+
                                             TextEntry::make('port.nom')
                                                 ->label('Port d\'entrée'),
-                                                
+
                                             TextEntry::make('agent.name')
                                                 ->label('Agent responsable')
                                                 ->icon('heroicon-o-user-circle'),
                                         ]),
-                                        
+
                                         TextEntry::make('description')
                                             ->label('Description')
                                             ->columnSpanFull()
                                             ->markdown()
                                             ->visible(fn ($record) => !empty($record->description)),
                                     ]),
-                                    
+
                                 Section::make('Dates clés')
                                     ->schema([
                                         Grid::make(3)->schema([
@@ -112,7 +126,7 @@ class ViewColis extends ViewRecord
                                                 ->label('Créé le')
                                                 ->dateTime('d/m/Y H:i')
                                                 ->icon('heroicon-o-calendar'),
-                                                
+
                                             TextEntry::make('updated_at')
                                                 ->label('Dernière modification')
                                                 ->dateTime('d/m/Y H:i')
@@ -120,7 +134,7 @@ class ViewColis extends ViewRecord
                                         ]),
                                     ]),
                             ]),
-                        
+
                         // ===== ÉTAPE PORT =====
                         Tab::make('Port')
                             ->icon('heroicon-o-archive-box')
@@ -143,13 +157,13 @@ class ViewColis extends ViewRecord
                                                     'SORTI' => 'success',
                                                     default => 'secondary',
                                                 }),
-                                                
+
                                             TextEntry::make('date_entree_port')
                                                 ->label('Date d\'entrée')
                                                 ->date('d/m/Y')
                                                 ->icon('heroicon-o-arrow-left-circle')
                                                 ->placeholder('Non renseignée'),
-                                                
+
                                             TextEntry::make('date_sortie_port')
                                                 ->label('Date de sortie')
                                                 ->date('d/m/Y')
@@ -158,7 +172,7 @@ class ViewColis extends ViewRecord
                                         ]),
                                     ]),
                             ]),
-                        
+
                         // ===== ÉTAPE DOUANE =====
                         Tab::make('Douane')
                             ->icon('heroicon-o-document-magnifying-glass')
@@ -172,7 +186,7 @@ class ViewColis extends ViewRecord
                                                 ->badge()
                                                 ->color('info')
                                                 ->placeholder('Non renseigné'),
-                                                
+
                                             TextEntry::make('etat_t1')
                                                 ->label('État T1')
                                                 ->badge()
@@ -186,14 +200,14 @@ class ViewColis extends ViewRecord
                                                     'PAYE' => 'success',
                                                     default => 'gray',
                                                 }),
-                                                
+
                                             TextEntry::make('declaration_reference')
                                                 ->label('Référence déclaration')
                                                 ->copyable()
                                                 ->badge()
                                                 ->placeholder('Non renseignée'),
                                         ]),
-                                        
+
                                         Grid::make(3)->schema([
                                             TextEntry::make('status_colis_douane')
                                                 ->label('Statut en douane')
@@ -210,13 +224,13 @@ class ViewColis extends ViewRecord
                                                     'SORTI' => 'success',
                                                     default => 'secondary',
                                                 }),
-                                                
+
                                             TextEntry::make('date_entree_douane')
                                                 ->label('Date d\'entrée')
                                                 ->date('d/m/Y')
                                                 ->icon('heroicon-o-arrow-left-circle')
                                                 ->placeholder('Non renseignée'),
-                                                
+
                                             TextEntry::make('date_sortie_douane')
                                                 ->label('Date de sortie')
                                                 ->date('d/m/Y')
@@ -225,11 +239,11 @@ class ViewColis extends ViewRecord
                                         ]),
                                     ]),
                             ]),
-                        
+
                         // ===== ÉTAPE EXPERTISE =====
                         Tab::make('Expertise')
                             ->icon('heroicon-o-clipboard-document-check')
-                            ->visible(fn ($record) => 
+                            ->visible(fn ($record) =>
                                 $record->typeColis->nom === 'Véhicules'
                             )
                             ->schema([
@@ -250,7 +264,7 @@ class ViewColis extends ViewRecord
                                                     default => 'gray',
                                                 }),
                                         ]),
-                                        
+
                                         // PVC Section
                                         Section::make('Procès-Verbal de Contrôle (PVC)')
                                             ->compact()
@@ -262,7 +276,7 @@ class ViewColis extends ViewRecord
                                                         ->badge()
                                                         ->color('info')
                                                         ->placeholder('Non renseigné'),
-                                                        
+
                                                     TextEntry::make('etat_pvc')
                                                         ->label('État PVC')
                                                         ->badge()
@@ -280,7 +294,7 @@ class ViewColis extends ViewRecord
                                                         }),
                                                 ]),
                                             ]),
-                                        
+
                                         // AE Section
                                         Section::make('Autorisation d\'Enlèvement (AE)')
                                             ->compact()
@@ -292,7 +306,7 @@ class ViewColis extends ViewRecord
                                                         ->badge()
                                                         ->color('info')
                                                         ->placeholder('Non renseigné'),
-                                                        
+
                                                     TextEntry::make('etat_ae')
                                                         ->label('État AE')
                                                         ->badge()
@@ -308,7 +322,7 @@ class ViewColis extends ViewRecord
                                                 }),
                                                 ]),
                                             ]),
-                                        
+
                                         // CMC Section
                                         Section::make('Certificat de Mise en Conformité (CMC)')
                                             ->compact()
@@ -320,7 +334,7 @@ class ViewColis extends ViewRecord
                                                         ->badge()
                                                         ->color('info')
                                                         ->placeholder('Non renseigné'),
-                                                        
+
                                                     TextEntry::make('etat_cmc')
                                                         ->label('État CMC')
                                                         ->badge()
@@ -338,7 +352,7 @@ class ViewColis extends ViewRecord
                                             ]),
                                     ]),
                             ]),
-                        
+
                         // ===== FINALISATION =====
                         Tab::make('Finalisation')
                             ->icon('heroicon-o-check-badge')
@@ -359,14 +373,14 @@ class ViewColis extends ViewRecord
                                                     'TERMINE' => 'success',
                                                     default => 'gray',
                                                 }),
-                                                
+
                                             TextEntry::make('date_livraison')
                                                 ->label('Date de livraison')
                                                 ->date('d/m/Y')
                                                 ->icon('heroicon-o-truck')
                                                 ->placeholder('Non renseignée'),
                                         ]),
-                                        
+
                                         TextEntry::make('commentaires_cloture')
                                             ->label('Commentaires')
                                             ->markdown()

@@ -22,11 +22,10 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Notifications\Notification;
 use Carbon\Carbon;
-use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 
 class EtapePort extends Page implements HasTable
 {
-    use InteractsWithTable, HasExports, HasPageShield;
+    use InteractsWithTable, HasExports;
 
     protected static ?string $navigationLabel = 'Port';
     protected static ?string $title = 'Gestion des Colis - Étape Port';
@@ -100,9 +99,9 @@ class EtapePort extends Page implements HasTable
                 TextColumn::make('typeColis.nom')
                     ->label('Type')
                     ->badge()
-                    ->color(fn ($record) =>
-                        str_contains(strtolower($record->typeColis?->nom ?? ''), 'Véhicules')
-                            ? 'warning'
+                    ->color(fn ($record) => 
+                        str_contains(strtolower($record->typeColis?->nom ?? ''), 'chassis') 
+                            ? 'warning' 
                             : 'primary'
                     )
                     ->sortable()
@@ -169,31 +168,31 @@ class EtapePort extends Page implements HasTable
                         if (!$record->date_entree_port) {
                             return null;
                         }
-
-                        $dateEntree = $record->date_entree_port instanceof Carbon
-                            ? $record->date_entree_port
+                        
+                        $dateEntree = $record->date_entree_port instanceof Carbon 
+                            ? $record->date_entree_port 
                             : Carbon::parse($record->date_entree_port);
-
-                        $dateSortie = $record->date_sortie_port
-                            ? ($record->date_sortie_port instanceof Carbon
-                                ? $record->date_sortie_port
+                        
+                        $dateSortie = $record->date_sortie_port 
+                            ? ($record->date_sortie_port instanceof Carbon 
+                                ? $record->date_sortie_port 
                                 : Carbon::parse($record->date_sortie_port))
                             : now();
-
+                        
                         $jours = (int) $dateEntree->diffInDays($dateSortie);
-
+                        
                         if ($jours === 0) {
                             return '< 1 jour';
                         }
-
+                        
                         return $jours . ' jour' . ($jours > 1 ? 's' : '');
                     })
                     ->badge()
                     ->color(function ($state) {
                         if (!$state) return 'gray';
-
+                        
                         if (str_contains($state, '<')) return 'warning';
-
+                        
                         $jours = (int) filter_var($state, FILTER_SANITIZE_NUMBER_INT);
                         return $jours > 7 ? 'danger' : ($jours > 3 ? 'warning' : 'success');
                     })
@@ -302,7 +301,7 @@ class EtapePort extends Page implements HasTable
                     Action::make('voir')
                         ->label('Détails complets')
                         ->icon('heroicon-o-eye')
-                        ->url(fn (Colis $record): string =>
+                        ->url(fn (Colis $record): string => 
                             \App\Filament\Resources\Colis\ColisResource::getUrl('view', ['record' => $record])
                         )
                         ->color('info')
@@ -433,17 +432,17 @@ class EtapePort extends Page implements HasTable
 
                             $callback = function() use ($records) {
                                 $file = fopen('php://output', 'w');
-
+                                
                                 fputcsv($file, ['N° BL', 'Client', 'Type', 'Port', 'Statut', 'Entrée', 'Sortie', 'Durée']);
-
+                                
                                 foreach ($records as $record) {
                                     $dateEntree = $record->date_entree_port ? Carbon::parse($record->date_entree_port) : null;
                                     $dateSortie = $record->date_sortie_port ? Carbon::parse($record->date_sortie_port) : null;
-
-                                    $duree = $dateEntree && $dateSortie
+                                    
+                                    $duree = $dateEntree && $dateSortie 
                                         ? $dateEntree->diffInDays($dateSortie) . ' jours'
                                         : ($dateEntree ? 'En cours' : 'N/A');
-
+                                    
                                     fputcsv($file, [
                                         $record->numero_bl,
                                         $record->dossierTransit?->client?->nom ?? 'N/A',
@@ -455,7 +454,7 @@ class EtapePort extends Page implements HasTable
                                         $duree,
                                     ]);
                                 }
-
+                                
                                 fclose($file);
                             };
 

@@ -33,7 +33,7 @@
             font-weight: bold;
             color: #667eea;
             text-align: center;
-            margin: 30px 0;
+            margin: 10px 0;
         }
         .content {
             padding: 20px;

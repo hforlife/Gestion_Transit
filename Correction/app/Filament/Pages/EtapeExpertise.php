@@ -27,11 +27,10 @@ use Filament\Tables\Enums\FiltersLayout;
 use Filament\Schemas\Components\Section;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Tabs\Tab;
-use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 
 class EtapeExpertise extends Page implements HasTable
 {
-    use InteractsWithTable, HasExports, HasPageShield;
+    use InteractsWithTable, HasExports;
 
     protected static ?string $navigationLabel = 'Expertise';
     protected static ?string $title = 'Gestion des Colis - Étape Expertise';
@@ -112,9 +111,9 @@ class EtapeExpertise extends Page implements HasTable
                 TextColumn::make('typeColis.nom')
                     ->label('Type')
                     ->badge()
-                    ->color(fn ($record) =>
-                        str_contains(strtolower($record->typeColis?->nom ?? ''), 'véhicules')
-                            ? 'warning'
+                    ->color(fn ($record) => 
+                        str_contains(strtolower($record->typeColis?->nom ?? ''), 'véhicules') 
+                            ? 'warning' 
                             : 'primary'
                     )
                     ->toggleable(),
@@ -224,10 +223,10 @@ class EtapeExpertise extends Page implements HasTable
                     ->falseIcon('heroicon-o-x-circle')
                     ->trueColor('success')
                     ->falseColor('danger')
-                    ->getStateUsing(fn ($record): bool =>
+                    ->getStateUsing(fn ($record): bool => 
                         $record->num_pvc && $record->num_ae && $record->num_cmc &&
-                        $record->etat_pvc === 'PAYE' &&
-                        $record->etat_ae === 'VALIDE' &&
+                        $record->etat_pvc === 'PAYE' && 
+                        $record->etat_ae === 'VALIDE' && 
                         $record->etat_cmc === 'RECU'
                     )
                     ->toggleable(),
@@ -309,7 +308,7 @@ class EtapeExpertise extends Page implements HasTable
                     Action::make('voir')
                         ->label('Détails complets')
                         ->icon('heroicon-o-eye')
-                        ->url(fn (Colis $record): string =>
+                        ->url(fn (Colis $record): string => 
                             \App\Filament\Resources\Colis\ColisResource::getUrl('view', ['record' => $record])
                         )
                         ->color('info')
@@ -429,17 +428,17 @@ class EtapeExpertise extends Page implements HasTable
                         ->label('Valider')
                         ->icon('heroicon-o-check')
                         ->color('success')
-                        ->visible(fn (Colis $record): bool =>
+                        ->visible(fn (Colis $record): bool => 
                             $record->num_pvc || $record->num_ae || $record->num_cmc
                         )
                         ->action(function (Colis $record) {
                             if ($record->num_pvc) $record->update(['etat_pvc' => 'PAYE']);
                             if ($record->num_ae) $record->update(['etat_ae' => 'VALIDE']);
                             if ($record->num_cmc) $record->update(['etat_cmc' => 'RECU']);
-
+                            
                             // Vérifier si tous les documents sont validés
-                            if ($record->etat_pvc === 'PAYE' &&
-                                $record->etat_ae === 'VALIDE' &&
+                            if ($record->etat_pvc === 'PAYE' && 
+                                $record->etat_ae === 'VALIDE' && 
                                 $record->etat_cmc === 'RECU') {
                                 $record->update([
                                     'etat_expertise' => 'EFFECTUEE',
@@ -475,9 +474,9 @@ class EtapeExpertise extends Page implements HasTable
                                 if ($record->num_pvc) $record->update(['etat_pvc' => 'PAYE']);
                                 if ($record->num_ae) $record->update(['etat_ae' => 'VALIDE']);
                                 if ($record->num_cmc) $record->update(['etat_cmc' => 'RECU']);
-
-                                if ($record->etat_pvc === 'PAYE' &&
-                                    $record->etat_ae === 'VALIDE' &&
+                                
+                                if ($record->etat_pvc === 'PAYE' && 
+                                    $record->etat_ae === 'VALIDE' && 
                                     $record->etat_cmc === 'RECU') {
                                     $record->update([
                                         'etat_expertise' => 'EFFECTUEE',
@@ -516,10 +515,10 @@ class EtapeExpertise extends Page implements HasTable
 
                             $callback = function() use ($records) {
                                 $file = fopen('php://output', 'w');
-
+                                
                                 // En-têtes
                                 fputcsv($file, ['N° BL', 'Client', 'Type', 'État expertise', 'PVC', 'État PVC', 'AE', 'État AE', 'CMC', 'État CMC']);
-
+                                
                                 foreach ($records as $record) {
                                     fputcsv($file, [
                                         $record->numero_bl,
@@ -534,7 +533,7 @@ class EtapeExpertise extends Page implements HasTable
                                         $record->etat_cmc ?? 'N/A',
                                     ]);
                                 }
-
+                                
                                 fclose($file);
                             };
 

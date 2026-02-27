@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo e($title ?? 'Document KGT'); ?></title>
+    <title>{{ $title ?? 'Document KGT' }}</title>
     <style>
         body {
             font-family: 'DejaVu Sans', sans-serif;
@@ -33,7 +33,7 @@
             font-weight: bold;
             color: #667eea;
             text-align: center;
-            margin: 10px 0;
+            margin: 30px 0;
         }
         .content {
             padding: 20px;
@@ -146,30 +146,29 @@
     
     <div class="company-info">
         <div>
-            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(isset($entreprise['logo']) && file_exists($entreprise['logo'])): ?>
-                <img src="<?php echo e($entreprise['logo']); ?>" alt="Logo" style="height: 60px;">
-            <?php else: ?>
-                <h1 style="color: #667eea;"><?php echo e($entreprise['nom']); ?></h1>
-            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+            @if(isset($entreprise['logo']) && file_exists($entreprise['logo']))
+                <img src="{{ $entreprise['logo'] }}" alt="Logo" style="height: 60px;">
+            @else
+                <h1 style="color: #667eea;">{{ $entreprise['nom'] }}</h1>
+            @endif
         </div>
         <div class="company-details">
-            <div><?php echo e($entreprise['adresse']); ?></div>
-            <div>Tel: <?php echo e($entreprise['tel']); ?> | Email: <?php echo e($entreprise['email']); ?></div>
-            <div><?php echo e($entreprise['rc']); ?> | <?php echo e($entreprise['ninea']); ?></div>
+            <div>{{ $entreprise['adresse'] }}</div>
+            <div>Tel: {{ $entreprise['tel'] }} | Email: {{ $entreprise['email'] }}</div>
+            <div>{{ $entreprise['rc'] }} | {{ $entreprise['ninea'] }}</div>
         </div>
     </div>
 
     <div class="document-title">
-        <?php echo e($title); ?>
-
+        {{ $title }}
     </div>
 
     <div class="content">
-        <?php echo $__env->yieldContent('content'); ?>
+        @yield('content')
     </div>
 
     <div class="footer">
-        Document généré le <?php echo e($date); ?> - KGT TRANSIT - Tous droits réservés
+        Document généré le {{ $date }} - KGT TRANSIT - Tous droits réservés
     </div>
 </body>
-</html><?php /**PATH C:\xampp\htdocs\Gestion_Transit\resources\views/pdf/layout.blade.php ENDPATH**/ ?>
+</html>

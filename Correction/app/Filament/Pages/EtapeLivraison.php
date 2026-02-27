@@ -27,11 +27,10 @@ use Filament\Actions\BulkAction;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Notifications\Notification;
 use Carbon\Carbon;
-use BezhanSalleh\FilamentShield\Traits\HasPageShield;
 
 class EtapeLivraison extends Page implements HasTable
 {
-    use InteractsWithTable, HasExports, HasPageShield;
+    use InteractsWithTable, HasExports;
 
     protected static ?string $navigationLabel = 'Livraison';
     protected static ?string $title = 'Gestion des Colis - Étape Livraison';
@@ -97,9 +96,9 @@ class EtapeLivraison extends Page implements HasTable
                 TextColumn::make('typeColis.nom')
                     ->label('Type')
                     ->badge()
-                    ->color(fn ($record) =>
-                        str_contains(strtolower($record->typeColis?->nom ?? ''), 'véhicules')
-                            ? 'warning'
+                    ->color(fn ($record) => 
+                        str_contains(strtolower($record->typeColis?->nom ?? ''), 'véhicules') 
+                            ? 'warning' 
                             : 'primary'
                     )
                     ->toggleable(),
@@ -147,7 +146,7 @@ class EtapeLivraison extends Page implements HasTable
                     ->falseIcon('heroicon-o-x-circle')
                     ->trueColor('success')
                     ->falseColor('danger')
-                    ->getStateUsing(fn ($record): bool =>
+                    ->getStateUsing(fn ($record): bool => 
                         $record->status_colis_livraison === 'LIVRE' && $record->date_livraison
                     )
                     ->toggleable(),
@@ -159,22 +158,22 @@ class EtapeLivraison extends Page implements HasTable
                         if (!$record->created_at || !$record->date_livraison) {
                             return 'N/A';
                         }
-
-                        $created = $record->created_at instanceof Carbon
-                            ? $record->created_at
+                        
+                        $created = $record->created_at instanceof Carbon 
+                            ? $record->created_at 
                             : Carbon::parse($record->created_at);
-
-                        $livree = $record->date_livraison instanceof Carbon
-                            ? $record->date_livraison
+                        
+                        $livree = $record->date_livraison instanceof Carbon 
+                            ? $record->date_livraison 
                             : Carbon::parse($record->date_livraison);
-
+                        
                         $jours = (int) $created->diffInDays($livree);
                         return $jours . ' jour' . ($jours > 1 ? 's' : '');
                     })
                     ->badge()
-                    ->color(fn ($state) =>
-                        $state !== 'N/A' && (int) filter_var($state, FILTER_SANITIZE_NUMBER_INT) > 7
-                            ? 'danger'
+                    ->color(fn ($state) => 
+                        $state !== 'N/A' && (int) filter_var($state, FILTER_SANITIZE_NUMBER_INT) > 7 
+                            ? 'danger' 
                             : 'success'
                     )
                     ->toggleable(),
@@ -221,7 +220,7 @@ class EtapeLivraison extends Page implements HasTable
 
                 Filter::make('en_retard')
                     ->label('En retard (>7 jours)')
-                    ->query(fn (Builder $query): Builder =>
+                    ->query(fn (Builder $query): Builder => 
                         $query->whereNotNull('date_livraison')
                               ->whereRaw('DATEDIFF(date_livraison, created_at) > 7')
                     )
@@ -246,7 +245,7 @@ class EtapeLivraison extends Page implements HasTable
                     Action::make('voir')
                         ->label('Détails complets')
                         ->icon('heroicon-o-eye')
-                        ->url(fn (Colis $record): string =>
+                        ->url(fn (Colis $record): string => 
                             \App\Filament\Resources\Colis\ColisResource::getUrl('view', ['record' => $record])
                         )
                         ->color('info')
@@ -289,7 +288,7 @@ class EtapeLivraison extends Page implements HasTable
                                     ->required()
                                     ->native(false)
                                     ->live()
-                                    ->afterStateUpdated(fn ($set, $state) =>
+                                    ->afterStateUpdated(fn ($set, $state) => 
                                         $state === 'LIVRE' ? $set('date_livraison', now()) : null
                                     ),
 
@@ -316,7 +315,7 @@ class EtapeLivraison extends Page implements HasTable
                         ->label('Marquer livré')
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
-                        ->visible(fn (Colis $record): bool =>
+                        ->visible(fn (Colis $record): bool => 
                             $record->status_colis_livraison !== 'LIVRE'
                         )
                         ->action(function (Colis $record) {
@@ -372,9 +371,9 @@ class EtapeLivraison extends Page implements HasTable
 
                             $callback = function() use ($records) {
                                 $file = fopen('php://output', 'w');
-
+                                
                                 fputcsv($file, ['N° BL', 'Client', 'Type', 'Statut', 'Date livraison', 'Commentaires']);
-
+                                
                                 foreach ($records as $record) {
                                     fputcsv($file, [
                                         $record->numero_bl,
@@ -385,7 +384,7 @@ class EtapeLivraison extends Page implements HasTable
                                         $record->commentaires_cloture ?? 'N/A',
                                     ]);
                                 }
-
+                                
                                 fclose($file);
                             };
 
