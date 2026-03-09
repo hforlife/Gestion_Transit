@@ -2,13 +2,14 @@
 
 namespace App\Filament\Pages;
 
-use App\Models\Colis;
+use App\Models\ColisUnite;
 use App\Filament\Traits\HasExports;
 use Filament\Pages\Page;
 use Filament\Tables\Table;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Enums\FiltersLayout;
@@ -19,23 +20,23 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\DatePicker;
 use Filament\Schemas\Components\Grid;
 use Illuminate\Database\Eloquent\Builder;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Schemas\Components\Tabs\Tab;
 use UnitEnum;
 use Filament\Notifications\Notification;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
+use Illuminate\Support\Collection;
 
 class EtapeDouane extends Page implements HasTable
 {
     use InteractsWithTable, HasExports, HasPageShield;
 
     protected static ?string $navigationLabel = 'Douane';
-    protected static ?string $title = 'Gestion des Colis - Étape Douane';
+    protected static ?string $title = 'Gestion des Unités - Étape Douane';
     protected static ?string $slug = 'etape-douane';
-    protected static string | UnitEnum | null $navigationGroup = 'Colis';
-    protected static ?int $navigationSort = 5;
+    protected static string | UnitEnum | null $navigationGroup = 'Colis / BL';
+    protected static ?int $navigationSort = 6;
     protected string $view = 'filament.pages.etape-douane';
 
     /**
@@ -44,41 +45,61 @@ class EtapeDouane extends Page implements HasTable
     public function getTabs(): array
     {
         return [
-            'all' => Tab::make('Tous les colis')
+            'all' => Tab::make('Toutes les unités')
                 ->icon('heroicon-o-rectangle-stack'),
 
             'conteneur' => Tab::make('Conteneurs')
                 ->icon('heroicon-o-cube')
                 ->modifyQueryUsing(fn (Builder $query) =>
-                    $query->whereHas('typeColis', fn ($q) =>
-                        $q->where('nom', 'Conteneur')
-                    )
+                    $query->where('type', 'CONTENEUR')
                 ),
 
-            'vehicule' => Tab::make('Véhicules')
+            'chassis' => Tab::make('Châssis')
                 ->icon('heroicon-o-truck')
                 ->modifyQueryUsing(fn (Builder $query) =>
-                    $query->whereHas('typeColis', fn ($q) =>
-                        $q->where('nom', 'Véhicules')
-                    )
+                    $query->where('type', 'CHASSIS')
+                ),
+
+            'chassis_voiture' => Tab::make('Châssis Voitures')
+                ->icon('heroicon-o-truck')
+                ->modifyQueryUsing(fn (Builder $query) =>
+                    $query->where('type', 'CHASSIS_VOITURE')
+                ),
+
+            'chassis_machine' => Tab::make('Châssis Machines')
+                ->icon('heroicon-o-truck')
+                ->modifyQueryUsing(fn (Builder $query) =>
+                    $query->where('type', 'CHASSIS_MACHINE')
                 ),
 
             'en_attente' => Tab::make('En attente')
                 ->icon('heroicon-o-clock')
                 ->modifyQueryUsing(fn (Builder $query) =>
-                    $query->where('status_colis_douane', 'EN_ATTENTE')
+                    $query->where('status_douane', 'EN_ATTENTE')
                 ),
 
             'entre' => Tab::make('Entrés')
                 ->icon('heroicon-o-arrow-left-circle')
                 ->modifyQueryUsing(fn (Builder $query) =>
-                    $query->where('status_colis_douane', 'ENTRE')
+                    $query->where('status_douane', 'ENTRE')
                 ),
 
             'sorti' => Tab::make('Sortis')
                 ->icon('heroicon-o-check-circle')
                 ->modifyQueryUsing(fn (Builder $query) =>
-                    $query->where('status_colis_douane', 'SORTI')
+                    $query->where('status_douane', 'SORTI')
+                ),
+
+            't1_fourni' => Tab::make('T1 Fourni')
+                ->icon('heroicon-o-document-plus')
+                ->modifyQueryUsing(fn (Builder $query) =>
+                    $query->where('etat_t1', 'FOURNI')
+                ),
+
+            't1_paye' => Tab::make('T1 Payé')
+                ->icon('heroicon-o-check-badge')
+                ->modifyQueryUsing(fn (Builder $query) =>
+                    $query->where('etat_t1', 'PAYE')
                 ),
         ];
     }
@@ -90,57 +111,92 @@ class EtapeDouane extends Page implements HasTable
     {
         return $table
             ->query(
-                Colis::query()
-                    ->with(['typeColis', 'dossierTransit.client', 'agent', 'port'])
+                ColisUnite::query()
+                    ->with(['colis.typeColis', 'colis.dossierTransit.client', 'colis.agent', 'colis.port'])
                     ->where(function ($query) {
                         $query->whereNotNull('num_t1')
                               ->orWhereNotNull('declaration_reference')
-                              ->orWhereNotNull('status_colis_douane');
+                              ->orWhereNotNull('status_douane');
                     })
             )
             ->columns([
-                // Informations principales du colis
-                TextColumn::make('numero_bl')
+                // Informations du colis parent
+                TextColumn::make('colis.numero_bl')
                     ->label('N° BL')
                     ->searchable()
                     ->sortable()
                     ->copyable()
                     ->weight('bold')
                     ->color('primary')
-                    ->description(fn ($record) => $record->description),
+                    ->description(fn ($record) => $record->colis?->description)
+                    ->url(fn ($record) => $record->colis ?
+                        \App\Filament\Resources\Colis\ColisResource::getUrl('view', ['record' => $record->colis]) : null)
+                    ->openUrlInNewTab(),
 
-                TextColumn::make('typeColis.nom')
-                    ->label('Type')
+                TextColumn::make('colis.typeColis.nom')
+                    ->label('Type BL')
                     ->sortable()
                     ->searchable()
                     ->toggleable(),
 
-                TextColumn::make('dossierTransit.client.nom')
+                // Informations de l'unité
+                TextColumn::make('type')
+                    ->label("Type d'unité")
+                    ->badge()
+                    ->color(fn ($state) => match ($state) {
+                        'CONTENEUR' => 'info',
+                        'CHASSIS' => 'warning',
+                        'CHASSIS_VOITURE' => 'success',
+                        'CHASSIS_MACHINE' => 'danger',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        'CONTENEUR' => 'Conteneur',
+                        'CHASSIS' => 'Châssis',
+                        'CHASSIS_VOITURE' => 'Châssis voiture',
+                        'CHASSIS_MACHINE' => 'Châssis machine',
+                        default => $state,
+                    })
+                    ->sortable()
+                    ->searchable()
+                    ->toggleable(),
+
+                TextColumn::make('numero_conteneur')
+                    ->label('N° Conteneur')
+                    ->placeholder('—')
+                    ->searchable()
+                    ->copyable()
+                    ->toggleable(),
+
+                TextColumn::make('numero_chassis')
+                    ->label('N° Châssis')
+                    ->placeholder('—')
+                    ->searchable()
+                    ->copyable()
+                    ->toggleable(),
+
+                TextColumn::make('vin')
+                    ->label('VIN')
+                    ->placeholder('—')
+                    ->copyable()
+                    ->limit(10)
+                    ->toggleable(),
+
+                // Client
+                TextColumn::make('colis.dossierTransit.client.nom')
                     ->label('Client')
                     ->sortable()
                     ->searchable()
                     ->toggleable(),
 
-                TextColumn::make('agent.name')
-                    ->label('Agent')
-                    ->sortable()
-                    ->searchable()
-                    ->toggleable(),
-
-                TextColumn::make('port.nom')
-                    ->label('Port')
-                    ->sortable()
-                    ->searchable()
-                    ->toggleable(),
-
-                // Colonnes spécifiques à la douane
+                // Informations douanières
                 TextColumn::make('num_t1')
                     ->label('N° T1')
                     ->searchable()
                     ->copyable()
                     ->icon('heroicon-o-document-text')
-                    ->color('gray')
                     ->badge()
+                    ->color('info')
                     ->toggleable(),
 
                 TextColumn::make('etat_t1')
@@ -149,11 +205,12 @@ class EtapeDouane extends Page implements HasTable
                     ->formatStateUsing(fn ($state) => match ($state) {
                         'FOURNI' => 'Fourni',
                         'PAYE' => 'Payé',
-                        default => $state ?? 'Non défini',
+                        default => 'Non défini',
                     })
                     ->colors([
                         'warning' => 'FOURNI',
                         'success' => 'PAYE',
+                        'gray' => null,
                     ])
                     ->toggleable(),
 
@@ -166,24 +223,28 @@ class EtapeDouane extends Page implements HasTable
                     ->tooltip(fn ($record) => $record->declaration_reference)
                     ->toggleable(),
 
-                TextColumn::make('status_colis_douane')
+                TextColumn::make('status_douane')
                     ->label('Statut Douane')
                     ->badge()
                     ->formatStateUsing(fn ($state) => match ($state) {
                         'EN_ATTENTE' => 'En attente',
                         'ENTRE' => 'Entré',
                         'SORTI' => 'Sorti',
-                        default => $state ?? 'Non défini',
+                        'BLOQUE' => 'Bloqué',
+                        default => 'Non défini',
                     })
                     ->colors([
                         'warning' => 'EN_ATTENTE',
                         'primary' => 'ENTRE',
                         'success' => 'SORTI',
+                        'danger' => 'BLOQUE',
+                        'gray' => null,
                     ])
                     ->icon(fn ($state) => match ($state) {
                         'EN_ATTENTE' => 'heroicon-o-clock',
                         'ENTRE' => 'heroicon-o-arrow-left-circle',
                         'SORTI' => 'heroicon-o-check-circle',
+                        'BLOQUE' => 'heroicon-o-exclamation-triangle',
                         default => 'heroicon-o-question-mark-circle',
                     })
                     ->toggleable(),
@@ -194,6 +255,7 @@ class EtapeDouane extends Page implements HasTable
                     ->sortable()
                     ->icon('heroicon-o-arrow-left-circle')
                     ->color('info')
+                    ->placeholder('—')
                     ->toggleable(),
 
                 TextColumn::make('date_sortie_douane')
@@ -202,7 +264,14 @@ class EtapeDouane extends Page implements HasTable
                     ->sortable()
                     ->icon('heroicon-o-arrow-right-circle')
                     ->color('success')
+                    ->placeholder('—')
                     ->toggleable(),
+
+                TextColumn::make('colis.port.nom')
+                    ->label('Port')
+                    ->sortable()
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('created_at')
                     ->label('Créé le')
@@ -211,12 +280,23 @@ class EtapeDouane extends Page implements HasTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                SelectFilter::make('status_colis_douane')
+                SelectFilter::make('type')
+                    ->label("Type d'unité")
+                    ->options([
+                        'CONTENEUR' => 'Conteneur',
+                        'CHASSIS' => 'Châssis',
+                        'CHASSIS_VOITURE' => 'Châssis voiture',
+                        'CHASSIS_MACHINE' => 'Châssis machine',
+                    ])
+                    ->multiple(),
+
+                SelectFilter::make('status_douane')
                     ->label('Statut Douane')
                     ->options([
                         'EN_ATTENTE' => 'En attente',
                         'ENTRE' => 'Entré',
                         'SORTI' => 'Sorti',
+                        'BLOQUE' => 'Bloqué',
                     ])
                     ->multiple(),
 
@@ -278,16 +358,14 @@ class EtapeDouane extends Page implements HasTable
                             );
                     }),
 
-                SelectFilter::make('client_id')
-                    ->label('Client')
-                    ->relationship('dossierTransit.client', 'nom')
-                    ->searchable()
-                    ->preload()
-                    ->multiple(),
-
                 Filter::make('has_t1')
                     ->label('Avec T1')
                     ->query(fn (Builder $query): Builder => $query->whereNotNull('num_t1'))
+                    ->toggle(),
+
+                Filter::make('sans_t1')
+                    ->label('Sans T1')
+                    ->query(fn (Builder $query): Builder => $query->whereNull('num_t1'))
                     ->toggle(),
 
                 Filter::make('has_declaration')
@@ -296,32 +374,26 @@ class EtapeDouane extends Page implements HasTable
                     ->toggle(),
             ], layout: FiltersLayout::AboveContent)
             ->actions([
-                // Actions individuelles groupées
                 ActionGroup::make([
-
-                    // Détails complets
-                    Action::make('voir')
-                        ->label('Détails complets')
-                        ->icon('heroicon-o-eye')
-                        ->url(fn (Colis $record): string =>
-                            \App\Filament\Resources\Colis\ColisResource::getUrl('view', ['record' => $record])
+                    Action::make('voir_colis')
+                        ->label('Voir le BL')
+                        ->icon('heroicon-o-document-text')
+                        ->url(fn (ColisUnite $record): string =>
+                            \App\Filament\Resources\Colis\ColisResource::getUrl('view', ['record' => $record->colis])
                         )
-                        ->color('info'),
+                        ->color('info')
+                        ->openUrlInNewTab(),
 
-                    // ✅ IMPRESSION FICHE DOUANE (via trait)
-                    $this->getPrintAction('pdf.etape-douane', 'Imprimer fiche douane'),
-
-                    // Mise à jour des informations douanières
                     Action::make('mettre_a_jour_douane')
                         ->label('Mise à jour')
                         ->icon('heroicon-o-pencil-square')
                         ->color('warning')
-                        ->action(function (Colis $record, array $data) {
+                        ->action(function (ColisUnite $record, array $data) {
                             $record->update([
                                 'num_t1' => $data['num_t1'] ?? $record->num_t1,
                                 'etat_t1' => $data['etat_t1'] ?? $record->etat_t1,
                                 'declaration_reference' => $data['declaration_reference'] ?? $record->declaration_reference,
-                                'status_colis_douane' => $data['status_colis_douane'] ?? $record->status_colis_douane,
+                                'status_douane' => $data['status_douane'] ?? $record->status_douane,
                                 'date_entree_douane' => $data['date_entree_douane'] ?? $record->date_entree_douane,
                                 'date_sortie_douane' => $data['date_sortie_douane'] ?? $record->date_sortie_douane,
                             ]);
@@ -336,7 +408,6 @@ class EtapeDouane extends Page implements HasTable
                                 TextInput::make('num_t1')
                                     ->label('N° T1')
                                     ->placeholder('Ex: T1-2024-001')
-                                    ->prefix('T1')
                                     ->maxLength(50),
 
                                 Select::make('etat_t1')
@@ -349,30 +420,27 @@ class EtapeDouane extends Page implements HasTable
                                 TextInput::make('declaration_reference')
                                     ->label('Référence déclaration')
                                     ->placeholder('Ex: DEC-2024-001234')
-                                    ->prefix('DEC')
                                     ->columnSpanFull(),
 
-                                Select::make('status_colis_douane')
+                                Select::make('status_douane')
                                     ->label('Statut douane')
                                     ->options([
                                         'EN_ATTENTE' => 'En attente',
                                         'ENTRE' => 'Entré',
                                         'SORTI' => 'Sorti',
+                                        'BLOQUE' => 'Bloqué',
                                     ])
-                                    ->required()
                                     ->columnSpanFull(),
 
                                 DatePicker::make('date_entree_douane')
                                     ->label('Date entrée')
                                     ->native(false)
-                                    ->displayFormat('d/m/Y')
-                                    ->closeOnDateSelection(),
+                                    ->displayFormat('d/m/Y'),
 
                                 DatePicker::make('date_sortie_douane')
                                     ->label('Date sortie')
                                     ->native(false)
                                     ->displayFormat('d/m/Y')
-                                    ->closeOnDateSelection()
                                     ->afterOrEqual('date_entree_douane'),
                             ]),
                         ])
@@ -384,36 +452,58 @@ class EtapeDouane extends Page implements HasTable
             ->bulkActions([
                 BulkActionGroup::make([
                     BulkAction::make('valider_t1')
-                        ->label('Valider T1')
-                        ->icon('heroicon-o-check')
-                        ->action(fn ($records) => $records->each->update(['etat_t1' => 'PAYE']))
+                        ->label('Marquer T1 comme payé')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->action(fn (Collection $records) => $records->each->update(['etat_t1' => 'PAYE']))
                         ->requiresConfirmation()
                         ->deselectRecordsAfterCompletion(),
 
-                    BulkAction::make('export_csv_bulk')
+                    BulkAction::make('fournir_t1')
+                        ->label('Marquer T1 comme fourni')
+                        ->icon('heroicon-o-document-plus')
+                        ->color('warning')
+                        ->action(fn (Collection $records) => $records->each->update(['etat_t1' => 'FOURNI']))
+                        ->requiresConfirmation()
+                        ->deselectRecordsAfterCompletion(),
+
+                    BulkAction::make('exporter_csv')
                         ->label('Exporter sélection (CSV)')
                         ->icon('heroicon-o-document-arrow-down')
                         ->color('success')
-                        ->action(function ($records) {
+                        ->action(function (Collection $records) {
                             $headers = [
                                 'Content-Type' => 'text/csv',
-                                'Content-Disposition' => 'attachment; filename="Colis-selection-' . now()->format('Y-m-d') . '.csv"',
+                                'Content-Disposition' => 'attachment; filename="unites-douane-' . now()->format('Y-m-d') . '.csv"',
                             ];
 
                             $callback = function() use ($records) {
                                 $file = fopen('php://output', 'w');
 
-                                // En-têtes
-                                fputcsv($file, ['N° BL', 'Client', 'Type', 'Statut', 'N° T1', 'Déclaration', 'Entrée', 'Sortie']);
+                                fputcsv($file, ['N° BL', 'Type', 'N° Conteneur', 'N° Châssis', 'VIN', 'Client', 'N° T1', 'État T1', 'Déclaration', 'Statut', 'Entrée', 'Sortie']);
 
                                 foreach ($records as $record) {
                                     fputcsv($file, [
-                                        $record->numero_bl,
-                                        $record->dossierTransit?->client?->nom ?? 'N/A',
-                                        $record->typeColis?->nom ?? 'N/A',
-                                        $record->status_colis_douane ?? 'N/A',
+                                        $record->colis?->numero_bl ?? 'N/A',
+                                        $record->type ?? 'N/A',
+                                        $record->numero_conteneur ?? 'N/A',
+                                        $record->numero_chassis ?? 'N/A',
+                                        $record->vin ?? 'N/A',
+                                        $record->colis?->dossierTransit?->client?->nom ?? 'N/A',
                                         $record->num_t1 ?? 'N/A',
+                                        match($record->etat_t1) {
+                                            'FOURNI' => 'Fourni',
+                                            'PAYE' => 'Payé',
+                                            default => 'Non défini',
+                                        },
                                         $record->declaration_reference ?? 'N/A',
+                                        match($record->status_douane) {
+                                            'EN_ATTENTE' => 'En attente',
+                                            'ENTRE' => 'Entré',
+                                            'SORTI' => 'Sorti',
+                                            'BLOQUE' => 'Bloqué',
+                                            default => 'Non défini',
+                                        },
                                         $record->date_entree_douane ? \Carbon\Carbon::parse($record->date_entree_douane)->format('d/m/Y') : 'N/A',
                                         $record->date_sortie_douane ? \Carbon\Carbon::parse($record->date_sortie_douane)->format('d/m/Y') : 'N/A',
                                     ]);
@@ -435,10 +525,10 @@ class EtapeDouane extends Page implements HasTable
      */
     public static function getNavigationBadge(): ?string
     {
-        return (string) Colis::query()
+        return (string) ColisUnite::query()
             ->where(function ($query) {
-                $query->where('status_colis_douane', 'EN_ATTENTE')
-                      ->orWhere('status_colis_douane', 'ENTRE');
+                $query->where('status_douane', 'EN_ATTENTE')
+                      ->orWhere('status_douane', 'ENTRE');
             })
             ->count();
     }
@@ -448,7 +538,7 @@ class EtapeDouane extends Page implements HasTable
      */
     public static function getNavigationLabel(): string
     {
-        return '2 - Etape Douane';
+        return '2 - Étape Douane';
     }
 
     /**
@@ -456,16 +546,17 @@ class EtapeDouane extends Page implements HasTable
      */
     public static function getNavigationBadgeColor(): ?string
     {
-        $count = Colis::query()
+        $count = ColisUnite::query()
             ->where(function ($query) {
-                $query->where('status_colis_douane', 'EN_ATTENTE')
-                      ->orWhere('status_colis_douane', 'ENTRE');
+                $query->where('status_douane', 'EN_ATTENTE')
+                      ->orWhere('status_douane', 'ENTRE');
             })
             ->count();
 
         return match (true) {
-            $count > 20 => 'danger',
-            $count > 10 => 'warning',
+            $count > 50 => 'danger',
+            $count > 20 => 'warning',
+            $count > 0 => 'info',
             default => 'success',
         };
     }

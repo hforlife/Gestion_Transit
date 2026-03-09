@@ -260,7 +260,7 @@ $icons = [
                         </div>
                     </td>
                     <td style="padding: 12px;">
-                        @php $statutDouane = formatStatut($colis->status_colis_douane); @endphp
+                        @php $statutDouane = formatStatut($colis->status_douane); @endphp
                         <span
                             style="display: inline-block; background: {{ $statutDouane['bg'] }}; color: {{ $statutDouane['color'] }}; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;">
                             {{ $statutDouane['label'] }}

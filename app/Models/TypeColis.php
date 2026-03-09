@@ -11,4 +11,9 @@ class TypeColis extends Model
         'description',
         'is_active'
     ];
+
+    public function colis()
+    {
+        return $this->hasMany(Colis::class, 'id_type_colis');
+    }
 }

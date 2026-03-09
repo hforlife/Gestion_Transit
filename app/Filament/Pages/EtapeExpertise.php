@@ -2,7 +2,7 @@
 
 namespace App\Filament\Pages;
 
-use App\Models\Colis;
+use App\Models\ColisUnite;
 use App\Filament\Traits\HasExports;
 use Filament\Pages\Page;
 use Filament\Tables\Table;
@@ -28,16 +28,17 @@ use Filament\Schemas\Components\Section;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Tabs\Tab;
 use BezhanSalleh\FilamentShield\Traits\HasPageShield;
+use Illuminate\Support\Collection;
 
 class EtapeExpertise extends Page implements HasTable
 {
     use InteractsWithTable, HasExports, HasPageShield;
 
     protected static ?string $navigationLabel = 'Expertise';
-    protected static ?string $title = 'Gestion des Colis - Étape Expertise';
+    protected static ?string $title = 'Gestion des Unités - Étape Expertise';
     protected static ?string $slug = 'etape-expertise';
-    protected static string | UnitEnum | null $navigationGroup = 'Colis';
-    protected static ?int $navigationSort = 6;
+    protected static string | UnitEnum | null $navigationGroup = 'Colis / BL';
+    protected static ?int $navigationSort = 7;
     protected string $view = 'filament.pages.etape-expertise';
 
     public static function canAccess(): bool
@@ -51,23 +52,19 @@ class EtapeExpertise extends Page implements HasTable
     public function getTabs(): array
     {
         return [
-            'all' => Tab::make('Tous les colis')
+            'all' => Tab::make('Toutes les unités')
                 ->icon('heroicon-o-rectangle-stack'),
 
             'conteneur' => Tab::make('Conteneurs')
                 ->icon('heroicon-o-cube')
                 ->modifyQueryUsing(fn (Builder $query) =>
-                    $query->whereHas('typeColis', fn ($q) =>
-                        $q->where('nom', 'Conteneur')
-                    )
+                    $query->where('type', 'CONTENEUR')
                 ),
 
-            'vehicule' => Tab::make('Véhicules')
+            'chassis' => Tab::make('Châssis')
                 ->icon('heroicon-o-truck')
                 ->modifyQueryUsing(fn (Builder $query) =>
-                    $query->whereHas('typeColis', fn ($q) =>
-                        $q->where('nom', 'Véhicules')
-                    )
+                    $query->whereIn('type', ['CHASSIS', 'CHASSIS_VOITURE', 'CHASSIS_MACHINE'])
                 ),
 
             'en_attente' => Tab::make('En attente')
@@ -81,6 +78,24 @@ class EtapeExpertise extends Page implements HasTable
                 ->modifyQueryUsing(fn (Builder $query) =>
                     $query->where('etat_expertise', 'EFFECTUEE')
                 ),
+
+            'pvc_manquant' => Tab::make('PVC manquant')
+                ->icon('heroicon-o-document-minus')
+                ->modifyQueryUsing(fn (Builder $query) =>
+                    $query->whereNull('num_pvc')
+                ),
+
+            'ae_manquant' => Tab::make('AE manquant')
+                ->icon('heroicon-o-document-minus')
+                ->modifyQueryUsing(fn (Builder $query) =>
+                    $query->whereNull('num_ae')
+                ),
+
+            'cmc_manquant' => Tab::make('CMC manquant')
+                ->icon('heroicon-o-document-minus')
+                ->modifyQueryUsing(fn (Builder $query) =>
+                    $query->whereNull('num_cmc')
+                ),
         ];
     }
 
@@ -88,8 +103,9 @@ class EtapeExpertise extends Page implements HasTable
     {
         return $table
             ->query(
-                Colis::query()
-                    ->with(['typeColis', 'dossierTransit.client', 'agent', 'port'])
+                ColisUnite::query()
+                    ->with(['colis.typeColis', 'colis.dossierTransit.client', 'colis.agent'])
+                    ->whereIn('type', ['CHASSIS', 'CHASSIS_VOITURE', 'CHASSIS_MACHINE'])
                     ->where(function ($query) {
                         $query->whereNotNull('num_pvc')
                               ->orWhereNotNull('num_ae')
@@ -98,28 +114,57 @@ class EtapeExpertise extends Page implements HasTable
                     })
             )
             ->columns([
-                // Informations principales du colis
-                TextColumn::make('numero_bl')
+                // Informations du colis parent
+                TextColumn::make('colis.numero_bl')
                     ->label('N° BL')
                     ->searchable()
                     ->sortable()
                     ->copyable()
                     ->weight('bold')
                     ->color('primary')
-                    ->description(fn ($record) => $record->description)
+                    ->description(fn ($record) => $record->colis?->description)
+                    ->url(fn ($record) => $record->colis ?
+                        \App\Filament\Resources\Colis\ColisResource::getUrl('view', ['record' => $record->colis]) : null)
+                    ->openUrlInNewTab()
                     ->toggleable(),
 
-                TextColumn::make('typeColis.nom')
-                    ->label('Type')
+                // Informations de l'unité
+                TextColumn::make('type')
+                    ->label("Type d'unité")
                     ->badge()
-                    ->color(fn ($record) =>
-                        str_contains(strtolower($record->typeColis?->nom ?? ''), 'véhicules')
-                            ? 'warning'
-                            : 'primary'
-                    )
+                    ->color(fn ($state) => match ($state) {
+                        'CONTENEUR' => 'info',
+                        'CHASSIS' => 'warning',
+                        'CHASSIS_VOITURE' => 'success',
+                        'CHASSIS_MACHINE' => 'danger',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        'CONTENEUR' => 'Conteneur',
+                        'CHASSIS' => 'Châssis',
+                        'CHASSIS_VOITURE' => 'Châssis voiture',
+                        'CHASSIS_MACHINE' => 'Châssis machine',
+                        default => $state,
+                    })
                     ->toggleable(),
 
-                TextColumn::make('dossierTransit.client.nom')
+                TextColumn::make('numero_chassis')
+                    ->label('N° Châssis')
+                    ->searchable()
+                    ->copyable()
+                    ->placeholder('—')
+                    ->toggleable(),
+
+                TextColumn::make('vin')
+                    ->label('VIN')
+                    ->searchable()
+                    ->copyable()
+                    ->placeholder('—')
+                    ->limit(10)
+                    ->toggleable(),
+
+                // Client
+                TextColumn::make('colis.dossierTransit.client.nom')
                     ->label('Client')
                     ->sortable()
                     ->searchable()
@@ -131,8 +176,9 @@ class EtapeExpertise extends Page implements HasTable
                     ->searchable()
                     ->copyable()
                     ->icon('heroicon-o-document-text')
-                    ->color('gray')
                     ->badge()
+                    ->color(fn ($state) => $state ? 'info' : 'gray')
+                    ->placeholder('—')
                     ->toggleable(),
 
                 TextColumn::make('etat_pvc')
@@ -142,12 +188,13 @@ class EtapeExpertise extends Page implements HasTable
                         'NON_RECU' => 'Non reçu',
                         'RECU' => 'Reçu',
                         'PAYE' => 'Payé',
-                        default => $state ?? 'Non défini',
+                        default => 'Non défini',
                     })
                     ->colors([
                         'danger' => 'NON_RECU',
                         'warning' => 'RECU',
                         'success' => 'PAYE',
+                        'gray' => null,
                     ])
                     ->toggleable(),
 
@@ -156,8 +203,9 @@ class EtapeExpertise extends Page implements HasTable
                     ->searchable()
                     ->copyable()
                     ->icon('heroicon-o-document-text')
-                    ->color('gray')
                     ->badge()
+                    ->color(fn ($state) => $state ? 'info' : 'gray')
+                    ->placeholder('—')
                     ->toggleable(),
 
                 TextColumn::make('etat_ae')
@@ -166,7 +214,7 @@ class EtapeExpertise extends Page implements HasTable
                     ->formatStateUsing(fn ($state) => match ($state) {
                         'NON_VALIDE' => 'Non valide',
                         'VALIDE' => 'Valide',
-                        default => $state ?? 'Non défini',
+                        default => 'Non défini',
                     })
                     ->colors([
                         'danger' => 'NON_VALIDE',
@@ -179,8 +227,9 @@ class EtapeExpertise extends Page implements HasTable
                     ->searchable()
                     ->copyable()
                     ->icon('heroicon-o-document-text')
-                    ->color('gray')
                     ->badge()
+                    ->color(fn ($state) => $state ? 'info' : 'gray')
+                    ->placeholder('—')
                     ->toggleable(),
 
                 TextColumn::make('etat_cmc')
@@ -189,7 +238,7 @@ class EtapeExpertise extends Page implements HasTable
                     ->formatStateUsing(fn ($state) => match ($state) {
                         'NON_RECU' => 'Non reçu',
                         'RECU' => 'Reçu',
-                        default => $state ?? 'Non défini',
+                        default => 'Non défini',
                     })
                     ->colors([
                         'danger' => 'NON_RECU',
@@ -204,7 +253,7 @@ class EtapeExpertise extends Page implements HasTable
                     ->formatStateUsing(fn ($state) => match ($state) {
                         'EN_ATTENTE' => 'En attente',
                         'EFFECTUEE' => 'Effectuée',
-                        default => $state ?? 'Non défini',
+                        default => 'Non défini',
                     })
                     ->colors([
                         'warning' => 'EN_ATTENTE',
@@ -225,25 +274,13 @@ class EtapeExpertise extends Page implements HasTable
                     ->trueColor('success')
                     ->falseColor('danger')
                     ->getStateUsing(fn ($record): bool =>
-                        $record->num_pvc && $record->num_ae && $record->num_cmc &&
+                        !is_null($record->num_pvc) &&
+                        !is_null($record->num_ae) &&
+                        !is_null($record->num_cmc) &&
                         $record->etat_pvc === 'PAYE' &&
                         $record->etat_ae === 'VALIDE' &&
                         $record->etat_cmc === 'RECU'
                     )
-                    ->toggleable(),
-
-                TextColumn::make('status')
-                    ->label('Statut dossier')
-                    ->badge()
-                    ->formatStateUsing(fn ($state) => match ($state) {
-                        'EN_COURS' => 'En cours',
-                        'TERMINE' => 'Terminé',
-                        default => $state ?? 'Non défini',
-                    })
-                    ->colors([
-                        'warning' => 'EN_COURS',
-                        'success' => 'TERMINE',
-                    ])
                     ->toggleable(),
 
                 TextColumn::make('created_at')
@@ -253,6 +290,16 @@ class EtapeExpertise extends Page implements HasTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                SelectFilter::make('type')
+                    ->label("Type d'unité")
+                    ->options([
+                        'CONTENEUR' => 'Conteneur',
+                        'CHASSIS' => 'Châssis',
+                        'CHASSIS_VOITURE' => 'Châssis voiture',
+                        'CHASSIS_MACHINE' => 'Châssis machine',
+                    ])
+                    ->multiple(),
+
                 SelectFilter::make('etat_expertise')
                     ->label('État expertise')
                     ->options([
@@ -288,7 +335,7 @@ class EtapeExpertise extends Page implements HasTable
 
                 SelectFilter::make('client_id')
                     ->label('Client')
-                    ->relationship('dossierTransit.client', 'nom')
+                    ->relationship('colis.dossierTransit.client', 'nom')
                     ->searchable()
                     ->preload()
                     ->multiple(),
@@ -301,19 +348,28 @@ class EtapeExpertise extends Page implements HasTable
                           ->orWhereNull('num_cmc');
                     }))
                     ->toggle(),
+
+                Filter::make('documents_complets')
+                    ->label('Documents complets')
+                    ->query(fn (Builder $query): Builder => $query
+                        ->whereNotNull('num_pvc')
+                        ->whereNotNull('num_ae')
+                        ->whereNotNull('num_cmc')
+                    )
+                    ->toggle(),
             ], layout: FiltersLayout::AboveContent)
             ->actions([
                 ActionGroup::make([
 
                     // Détails complets
-                    Action::make('voir')
-                        ->label('Détails complets')
-                        ->icon('heroicon-o-eye')
-                        ->url(fn (Colis $record): string =>
-                            \App\Filament\Resources\Colis\ColisResource::getUrl('view', ['record' => $record])
+                    Action::make('voir_colis')
+                        ->label('Voir le BL')
+                        ->icon('heroicon-o-document-text')
+                        ->url(fn (ColisUnite $record): string =>
+                            \App\Filament\Resources\Colis\ColisResource::getUrl('view', ['record' => $record->colis])
                         )
                         ->color('info')
-                        ->openUrlInNewTab(false),
+                        ->openUrlInNewTab(),
 
                     // ✅ IMPRESSION RAPPORT EXPERTISE (via trait)
                     $this->getPrintAction('pdf.etape-expertise', 'Imprimer rapport expertise'),
@@ -323,7 +379,7 @@ class EtapeExpertise extends Page implements HasTable
                         ->label('Gérer expertise')
                         ->icon('heroicon-o-clipboard-document-list')
                         ->color('primary')
-                        ->action(function (Colis $record, array $data) {
+                        ->action(function (ColisUnite $record, array $data) {
                             $record->update([
                                 'num_pvc' => $data['num_pvc'] ?? $record->num_pvc,
                                 'etat_pvc' => $data['etat_pvc'] ?? $record->etat_pvc,
@@ -332,7 +388,6 @@ class EtapeExpertise extends Page implements HasTable
                                 'num_cmc' => $data['num_cmc'] ?? $record->num_cmc,
                                 'etat_cmc' => $data['etat_cmc'] ?? $record->etat_cmc,
                                 'etat_expertise' => $data['etat_expertise'] ?? $record->etat_expertise,
-                                'status' => $data['status'] ?? $record->status,
                             ]);
 
                             Notification::make()
@@ -349,7 +404,6 @@ class EtapeExpertise extends Page implements HasTable
                                         TextInput::make('num_pvc')
                                             ->label('N° PVC')
                                             ->placeholder('Ex: PVC-2024-001')
-                                            ->prefix('PVC')
                                             ->maxLength(50),
 
                                         Select::make('etat_pvc')
@@ -369,7 +423,6 @@ class EtapeExpertise extends Page implements HasTable
                                         TextInput::make('num_ae')
                                             ->label('N° AE')
                                             ->placeholder('Ex: AE-2024-001')
-                                            ->prefix('AE')
                                             ->maxLength(50),
 
                                         Select::make('etat_ae')
@@ -388,7 +441,6 @@ class EtapeExpertise extends Page implements HasTable
                                         TextInput::make('num_cmc')
                                             ->label('N° CMC')
                                             ->placeholder('Ex: CMC-2024-001')
-                                            ->prefix('CMC')
                                             ->maxLength(50),
 
                                         Select::make('etat_cmc')
@@ -401,7 +453,7 @@ class EtapeExpertise extends Page implements HasTable
                                     ])->columnSpan(1),
                             ]),
 
-                            Grid::make(2)->schema([
+                            Grid::make(1)->schema([
                                 Select::make('etat_expertise')
                                     ->label('État de l\'expertise')
                                     ->options([
@@ -409,14 +461,6 @@ class EtapeExpertise extends Page implements HasTable
                                         'EFFECTUEE' => 'Effectuée',
                                     ])
                                     ->required()
-                                    ->native(false),
-
-                                Select::make('status')
-                                    ->label('Statut dossier')
-                                    ->options([
-                                        'EN_COURS' => 'En cours',
-                                        'TERMINE' => 'Terminé',
-                                    ])
                                     ->native(false),
                             ]),
                         ])
@@ -429,10 +473,10 @@ class EtapeExpertise extends Page implements HasTable
                         ->label('Valider')
                         ->icon('heroicon-o-check')
                         ->color('success')
-                        ->visible(fn (Colis $record): bool =>
+                        ->visible(fn (ColisUnite $record): bool =>
                             $record->num_pvc || $record->num_ae || $record->num_cmc
                         )
-                        ->action(function (Colis $record) {
+                        ->action(function (ColisUnite $record) {
                             if ($record->num_pvc) $record->update(['etat_pvc' => 'PAYE']);
                             if ($record->num_ae) $record->update(['etat_ae' => 'VALIDE']);
                             if ($record->num_cmc) $record->update(['etat_cmc' => 'RECU']);
@@ -441,10 +485,7 @@ class EtapeExpertise extends Page implements HasTable
                             if ($record->etat_pvc === 'PAYE' &&
                                 $record->etat_ae === 'VALIDE' &&
                                 $record->etat_cmc === 'RECU') {
-                                $record->update([
-                                    'etat_expertise' => 'EFFECTUEE',
-                                    'status' => 'TERMINE'
-                                ]);
+                                $record->update(['etat_expertise' => 'EFFECTUEE']);
 
                                 Notification::make()
                                     ->title('Expertise complétée')
@@ -470,7 +511,7 @@ class EtapeExpertise extends Page implements HasTable
                     BulkAction::make('valider_documents')
                         ->label('Valider documents')
                         ->icon('heroicon-o-check-circle')
-                        ->action(function ($records) {
+                        ->action(function (Collection $records) {
                             foreach ($records as $record) {
                                 if ($record->num_pvc) $record->update(['etat_pvc' => 'PAYE']);
                                 if ($record->num_ae) $record->update(['etat_ae' => 'VALIDE']);
@@ -479,10 +520,7 @@ class EtapeExpertise extends Page implements HasTable
                                 if ($record->etat_pvc === 'PAYE' &&
                                     $record->etat_ae === 'VALIDE' &&
                                     $record->etat_cmc === 'RECU') {
-                                    $record->update([
-                                        'etat_expertise' => 'EFFECTUEE',
-                                        'status' => 'TERMINE'
-                                    ]);
+                                    $record->update(['etat_expertise' => 'EFFECTUEE']);
                                 }
                             }
 
@@ -498,40 +536,71 @@ class EtapeExpertise extends Page implements HasTable
                     BulkAction::make('marquer_termine')
                         ->label('Marquer terminé')
                         ->icon('heroicon-o-check-badge')
-                        ->action(fn ($records) => $records->each->update([
+                        ->action(fn (Collection $records) => $records->each->update([
                             'etat_expertise' => 'EFFECTUEE',
-                            'status' => 'TERMINE'
                         ]))
                         ->requiresConfirmation(),
 
-                    BulkAction::make('export_csv_bulk')
+                    BulkAction::make('exporter_csv')
                         ->label('Exporter sélection (CSV)')
                         ->icon('heroicon-o-document-arrow-down')
                         ->color('success')
-                        ->action(function ($records) {
+                        ->action(function (Collection $records) {
                             $headers = [
                                 'Content-Type' => 'text/csv',
-                                'Content-Disposition' => 'attachment; filename="Expertise-selection-' . now()->format('Y-m-d') . '.csv"',
+                                'Content-Disposition' => 'attachment; filename="expertise-selection-' . now()->format('Y-m-d') . '.csv"',
                             ];
 
                             $callback = function() use ($records) {
                                 $file = fopen('php://output', 'w');
 
                                 // En-têtes
-                                fputcsv($file, ['N° BL', 'Client', 'Type', 'État expertise', 'PVC', 'État PVC', 'AE', 'État AE', 'CMC', 'État CMC']);
+                                fputcsv($file, [
+                                    'N° BL',
+                                    'Type',
+                                    'N° Châssis',
+                                    'VIN',
+                                    'Client',
+                                    'État expertise',
+                                    'N° PVC',
+                                    'État PVC',
+                                    'N° AE',
+                                    'État AE',
+                                    'N° CMC',
+                                    'État CMC'
+                                ]);
 
                                 foreach ($records as $record) {
                                     fputcsv($file, [
-                                        $record->numero_bl,
-                                        $record->dossierTransit?->client?->nom ?? 'N/A',
-                                        $record->typeColis?->nom ?? 'N/A',
-                                        $record->etat_expertise ?? 'N/A',
+                                        $record->colis?->numero_bl ?? 'N/A',
+                                        $record->type ?? 'N/A',
+                                        $record->numero_chassis ?? 'N/A',
+                                        $record->vin ?? 'N/A',
+                                        $record->colis?->dossierTransit?->client?->nom ?? 'N/A',
+                                        match($record->etat_expertise) {
+                                            'EN_ATTENTE' => 'En attente',
+                                            'EFFECTUEE' => 'Effectuée',
+                                            default => 'Non défini',
+                                        },
                                         $record->num_pvc ?? 'N/A',
-                                        $record->etat_pvc ?? 'N/A',
+                                        match($record->etat_pvc) {
+                                            'NON_RECU' => 'Non reçu',
+                                            'RECU' => 'Reçu',
+                                            'PAYE' => 'Payé',
+                                            default => 'N/A',
+                                        },
                                         $record->num_ae ?? 'N/A',
-                                        $record->etat_ae ?? 'N/A',
+                                        match($record->etat_ae) {
+                                            'NON_VALIDE' => 'Non valide',
+                                            'VALIDE' => 'Valide',
+                                            default => 'N/A',
+                                        },
                                         $record->num_cmc ?? 'N/A',
-                                        $record->etat_cmc ?? 'N/A',
+                                        match($record->etat_cmc) {
+                                            'NON_RECU' => 'Non reçu',
+                                            'RECU' => 'Reçu',
+                                            default => 'N/A',
+                                        },
                                     ]);
                                 }
 
@@ -546,27 +615,30 @@ class EtapeExpertise extends Page implements HasTable
             ->poll('30s');
     }
 
-    public static function getNavigationBadge(): ?string
-    {
-        return (string) Colis::query()
-            ->where('etat_expertise', 'EN_ATTENTE')
-            ->count();
-    }
-
     public static function getNavigationLabel(): string
     {
-        return '3 - Etape Expertise';
+        return '3 - Étape Expertise';
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        return (string) ColisUnite::query()
+            ->whereIn('type', ['CHASSIS', 'CHASSIS_VOITURE', 'CHASSIS_MACHINE'])
+            ->where('etat_expertise', 'EN_ATTENTE')
+            ->count();
     }
 
     public static function getNavigationBadgeColor(): ?string
     {
-        $count = Colis::query()
+        $count = ColisUnite::query()
+            ->whereIn('type', ['CHASSIS', 'CHASSIS_VOITURE', 'CHASSIS_MACHINE'])
             ->where('etat_expertise', 'EN_ATTENTE')
             ->count();
 
         return match (true) {
-            $count > 20 => 'danger',
-            $count > 10 => 'warning',
+            $count > 50 => 'danger',
+            $count > 20 => 'warning',
+            $count > 0 => 'info',
             default => 'success',
         };
     }

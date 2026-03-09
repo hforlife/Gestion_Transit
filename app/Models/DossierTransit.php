@@ -9,7 +9,6 @@ class DossierTransit extends Model
     //
     protected $fillable = [
         'client_id',
-        'agent_id',
         'id_type_dossier',
         'nom',
         'reference',

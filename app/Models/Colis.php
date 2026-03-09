@@ -3,57 +3,50 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Colis extends Model
 {
-    //
+    use HasFactory;
+
+    protected $table = 'colis';
+
     protected $fillable = [
         'numero_bl',
         'description',
-        'etat_colis',
         'id_type_colis',
         'user_id',
         'id_port',
-        'id_dossier_transit',
-        // port
-        'date_entree_port',
-        'date_sortie_port',
-        'status_colis_port',
-        // douane
-        'num_t1',
-        'etat_t1',
-        'declaration_reference',
-        'date_entree_douane',
-        'date_sortie_douane',
-        'status_colis_douane',
-        // expertise
-        'num_pvc',
-        'num_ae',
-        'num_cmc',
-        'etat_expertise',
-        'etat_pvc',
-        'etat_ae',
-        'etat_cmc',
-        'status',
-        // livraison
-        'date_livraison',
-        'status_colis_livraison',
-        'commentaires_cloture'
+        'etat_colis',
     ];
+
+    protected $casts = [
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
+    /* =========================================
+     | RELATIONS
+     ========================================= */
 
     public function typeColis()
     {
         return $this->belongsTo(TypeColis::class, 'id_type_colis');
     }
 
-    public function agent()
-    {
-        return $this->belongsTo(User::class, 'user_id');
-    }
-
     public function port()
     {
         return $this->belongsTo(Port::class, 'id_port');
+    }
+
+    public function agent()
+    {
+        return $this->belongsTo(User::class,'user_id');
+    }
+
+    public function unites()
+    {
+        return $this->hasMany(ColisUnite::class);
     }
 
     public function dossierTransit()
@@ -66,106 +59,46 @@ class Colis extends Model
         return $this->belongsTo(Client::class);
     }
 
-    // public function portOperation()
-    // {
-    //     return $this->hasOne(PortOperation::class);
-    // }
+    /* =========================================
+     | ACCESSORS UTILES
+     ========================================= */
 
-    // public function douaneOperation()
-    // {
-    //     return $this->hasOne(DouaneOperation::class);
-    // }
-
-    // public function expertise()
-    // {
-    //     return $this->hasOne(Expertise::class);
-    // }
-
-    public function changeStatus($status)
+    public function getTotalUnitesAttribute()
     {
-        $this->etat_colis = $status;
-        $this->save();
+        return $this->unites()->count();
     }
 
-    /**
-     * Historique de tracking du colis
-     */
-    // public function trackingEvents()
-    // {
-    //     return $this->morphMany(TrackingEvent::class, 'trackable');
-    // }
-
-    /**
-     * Observer automatique
-     */
-    // protected static function booted()
-    // {
-    //     static::updated(function ($colis) {
-    //         if ($colis->wasChanged('etat_colis')) {
-    //             $colis->trackingEvents()->create([
-    //                 'step' => $colis->etat_colis,
-    //                 'label' => match ($colis->etat_colis) {
-    //                     'BL_ENREGISTRE' => 'BL enregistré',
-    //                     'AU_PORT' => 'Arrivé au port',
-    //                     'A_LA_DOUANE' => 'À la douane',
-    //                     'EN_ROUTE' => 'En route',
-    //                     'LIVRE' => 'Livré',
-    //                 },
-    //                 'user_id' => auth()->id(),
-    //             ]);
-    //         }
-    //     });
-
-    // }
-
-    public function getTimeline(): array
+    public function getUnitesLivreesAttribute()
     {
-        $timeline = [];
+        return $this->unites()
+            ->where('etat', 'LIVRE')
+            ->count();
+    }
 
-        // BL
-        $timeline[] = [
-            'label' => 'BL enregistré',
-            'date' => $this->created_at,
-            'status' => 'done',
+    public function getProgressionAttribute()
+    {
+        $total = $this->total_unites;
+
+        if ($total === 0) {
+            return 0;
+        }
+
+        return round(($this->unites_livrees / $total) * 100);
+    }
+
+    /* =========================================
+     | STATISTIQUES
+     ========================================= */
+
+    public function statsUnites()
+    {
+        return [
+            'AU_PORT' => $this->unites()->where('etat', 'AU_PORT')->count(),
+            'A_LA_DOUANE' => $this->unites()->where('etat', 'A_LA_DOUANE')->count(),
+            'EXPERTISE' => $this->unites()->where('etat', 'EXPERTISE')->count(),
+            'EN_ROUTE' => $this->unites()->where('etat', 'EN_ROUTE')->count(),
+            'LIVRE' => $this->unites()->where('etat', 'LIVRE')->count(),
         ];
-
-        // Port
-        if ($this->portOperation) {
-            $timeline[] = [
-                'label' => 'Passage au port',
-                'date' => $this->portOperation->date_entree_port,
-                'status' => $this->portOperation->status_colis,
-            ];
-        }
-
-        // Douane
-        if ($this->douaneOperation) {
-            $timeline[] = [
-                'label' => 'Formalités douanières',
-                'date' => $this->douaneOperation->date_entree_douane,
-                'status' => $this->douaneOperation->status_colis,
-            ];
-        }
-
-        // Expertise (voiture)
-        if ($this->expertise) {
-            $timeline[] = [
-                'label' => 'Expertise ONT',
-                'date' => $this->expertise->updated_at,
-                'status' => $this->expertise->status,
-            ];
-        }
-
-        // Livraison
-        if ($this->livraisonOperation) {
-            $timeline[] = [
-                'label' => 'Livraison',
-                'date' => $this->livraisonOperation->date_livraison,
-                'status' => $this->livraisonOperation->statut,
-            ];
-        }
-
-        return $timeline;
     }
-
 }
+

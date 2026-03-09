@@ -22,7 +22,7 @@ class ColisResource extends Resource
 
     protected static ?string $model = Colis::class;
 
-    protected static string | UnitEnum | null $navigationGroup = 'Colis';
+    protected static string | UnitEnum | null $navigationGroup = 'Colis / BL';
 
     // protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCube;
 

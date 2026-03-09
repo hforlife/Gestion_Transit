@@ -50,18 +50,16 @@ class ListColis extends ListRecords
                     fn(Builder $query) =>
                     $query->whereHas(
                         'typeColis',
-                        fn($q) =>
-                        $q->where('nom', 'Conteneur')
+                        fn($q) => $q->where('nom', 'Conteneur')
                     )
                 ),
 
-            'vehicule' => Tab::make('Véhicules')
+            'chassis' => Tab::make('Châssis')
                 ->modifyQueryUsing(
                     fn(Builder $query) =>
                     $query->whereHas(
                         'typeColis',
-                        fn($q) =>
-                        $q->where('nom', 'Véhicules')
+                        fn($q) => $q->where('nom', 'Chassis')
                     )
                 ),
         ];
@@ -80,12 +78,6 @@ class ListColis extends ListRecords
                     ->icon('heroicon-o-eye')
                     ->color('info')
                     ->url(fn($record) => ColisResource::getUrl('view', ['record' => $record])),
-
-                // Imprimer Fiche Douane
-                // $this->getPrintAction('pdf.etape-douane', 'Imprimer fiche douane'),
-
-                // Imprimer BL
-                // $this->getPrintAction('pdf.bl', 'Imprimer BL'),
 
                 // Récapitulatif complet
                 $this->getPrintAction('pdf.recap-complet', 'Récapitulatif complet'),
@@ -106,8 +98,8 @@ class ListColis extends ListRecords
                         }
                     ])),
 
-                    // Delete
-                    DeleteAction::make()
+                // Delete
+                DeleteAction::make()
                     ->label('Supprimer')
                     ->visible(fn($record) => $record->status !== 'TERMINE')
             ]),

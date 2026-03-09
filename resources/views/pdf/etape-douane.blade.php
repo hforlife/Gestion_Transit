@@ -2,12 +2,12 @@
 
 @section('content')
     <div style="text-align: right; margin-bottom: 20px;">
-        <span class="badge badge-{{ $colis->status_colis_douane === 'SORTI' ? 'success' : 'warning' }}">
-            {{ match($colis->status_colis_douane) {
+        <span class="badge badge-{{ $colis->status_douane === 'SORTI' ? 'success' : 'warning' }}">
+            {{ match($colis->status_douane) {
                 'EN_ATTENTE' => 'EN ATTENTE',
                 'ENTRE' => 'ENTRÉ EN DOUANE',
                 'SORTI' => 'SORTI DE DOUANE',
-                default => $colis->status_colis_douane
+                default => $colis->status_douane
             } }}
         </span>
     </div>
@@ -97,7 +97,7 @@
     @if($colis->etat_colis === 'A_LA_DOUANE')
     <div style="margin-top: 30px; padding: 15px; background: #f0f9ff; border-left: 4px solid #667eea;">
         <h4 style="margin: 0 0 10px 0; color: #667eea;">Suivant :</h4>
-        <p>Le colis est actuellement à la douane. Prochaine étape : 
+        <p>Le colis est actuellement à la douane. Prochaine étape :
             @if($colis->typeColis?->nom === 'Véhicules')
                 Expertise
             @else

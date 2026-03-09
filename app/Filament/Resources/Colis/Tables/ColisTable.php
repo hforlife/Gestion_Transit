@@ -22,8 +22,10 @@ class ColisTable
                     'typeColis',
                     'dossierTransit.client',
                     'port',
-                    'agent'
+                    'agent',
+                    'unites' // 👈 Chargement des unités
                 ])
+                    ->withCount('unites') // 👈 Comptage des unités
             )
 
 
@@ -45,10 +47,26 @@ class ColisTable
                 TextColumn::make('typeColis.nom')
                     ->label('Type')
                     ->badge()
-                    ->color(
-                        fn($state) =>
-                        $state === 'Véhicules' ? 'warning' : 'primary'
-                    )
+                    ->color(function ($state) {
+                        return match ($state) {
+                            'Conteneur' => 'primary',
+                            'Chassis' => 'warning',
+                            'Chassis Voiture' => 'success',
+                            'Chassis Machine' => 'danger',
+                            default => 'gray',
+                        };
+                    })
+                    ->sortable(),
+
+                /* ===============================
+                |  NOUVEAU : COMPTEUR D'UNITÉS
+                ===============================*/
+                TextColumn::make('unites_count')
+                    ->label('Unités')
+                    ->counts('unites')
+                    ->badge()
+                    ->color(fn($state) => $state > 0 ? 'primary' : 'gray')
+                    ->formatStateUsing(fn($state) => $state . ' unité' . ($state > 1 ? 's' : ''))
                     ->sortable(),
 
                 TextColumn::make('dossierTransit.client.nom')
@@ -66,11 +84,12 @@ class ColisTable
                  ===============================*/
 
                 TextColumn::make('status_colis_port')
-                    ->label('Port')
+                    ->label('Etat Port')
+                    ->sortable()
                     ->badge()
                     ->color(fn($state) => match ($state) {
                         'EN_ATTENTE' => 'secondary',
-                        'ENTRE' => 'warning',
+                        'PORT' => 'warning',
                         'SORTI' => 'success',
                         default => 'gray',
                     }),
@@ -82,79 +101,86 @@ class ColisTable
                     ->toggleable(),
 
                 /* ===============================
-                 |  DOUANE
-                 ===============================*/
+                |  NOUVEAU : STATISTIQUES DES UNITÉS
+                   ===============================*/
 
-                TextColumn::make('status_colis_douane')
-                    ->label('Douane')
-                    ->badge()
-                    ->color(fn($state) => match ($state) {
-                        'EN_ATTENTE' => 'secondary',
-                        'ENTRE' => 'warning',
-                        'SORTI' => 'success',
-                        default => 'gray',
-                    }),
-
-                TextColumn::make('num_t1')
-                    ->label('T1')
-                    ->badge()
-                    ->copyable()
-                    ->color(
-                        fn($state) =>
-                        filled($state) ? 'success' : 'secondary'
+                TextColumn::make('unites_au_port')
+                    ->label('Au port')
+                    ->getStateUsing(
+                        fn($record) =>
+                        $record->unites->where('etat', 'AU_PORT')->count()
                     )
-                    ->toggleable(),
-
-                TextColumn::make('etat_t1')
-                    ->label('État T1')
                     ->badge()
-                    ->color(
-                        fn($state) =>
-                        $state === 'PAYE' ? 'success' : 'secondary'
+                    ->color('warning')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('unites_en_douane')
+                    ->label('En douane')
+                    ->getStateUsing(
+                        fn($record) =>
+                        $record->unites->where('etat', 'A_LA_DOUANE')->count()
                     )
+                    ->badge()
+                    ->color('info')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('unites_en_expertise')
+                    ->label('Expertise')
+                    ->getStateUsing(
+                        fn($record) =>
+                        $record->unites->where('etat', 'EXPERTISE')->count()
+                    )
+                    ->badge()
+                    ->color('purple')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('unites_en_route')
+                    ->label('En route')
+                    ->getStateUsing(
+                        fn($record) =>
+                        $record->unites->where('etat', 'EN_ROUTE')->count()
+                    )
+                    ->badge()
+                    ->color('primary')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('unites_livrees')
+                    ->label('Livrés')
+                    ->getStateUsing(
+                        fn($record) =>
+                        $record->unites->where('etat', 'LIVRE')->count()
+                    )
+                    ->badge()
+                    ->color('success')
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 /* ===============================
-                 |  EXPERTISE
-                 ===============================*/
+                |  PROGRESSION
+                ===============================*/
+                IconColumn::make('progression')
+                    ->label('Progression')
+                    ->getStateUsing(function ($record) {
+                        $total = $record->unites->count();
 
-                TextColumn::make('etat_expertise')
-                    ->label('Expertise')
-                    ->badge()
-                    ->color(
-                        fn($state) =>
-                        $state === 'EFFECTUEE' ? 'success' : 'danger'
-                    )
-                    ->toggleable(isToggledHiddenByDefault: true),
+                        if ($total === 0) {
+                            return 0;
+                        }
 
-                TextColumn::make('etat_pvc')
-                    ->label('PVC')
-                    ->badge()
-                    ->color(fn($state) => match ($state) {
-                        'NON_RECU' => 'secondary',
-                        'RECU' => 'warning',
-                        'PAYE' => 'success',
+                        $livrees = $record->unites->where('etat', 'LIVRE')->count();
+
+                        return round(($livrees / $total) * 100);
+                    })
+                    ->icon(fn($state) => match (true) {
+                        $state >= 100 => 'heroicon-o-check-circle',
+                        $state >= 50 => 'heroicon-o-arrow-path',
+                        default => 'heroicon-o-clock',
+                    })
+                    ->color(fn($state) => match (true) {
+                        $state >= 100 => 'success',
+                        $state >= 50 => 'warning',
                         default => 'gray',
                     })
                     ->toggleable(),
-
-                TextColumn::make('etat_ae')
-                    ->label('AE')
-                    ->badge()
-                    ->color(
-                        fn($state) =>
-                        $state === 'VALIDE' ? 'success' : 'danger'
-                    )
-                    ->toggleable(),
-
-                TextColumn::make('etat_cmc')
-                    ->label('CMC')
-                    ->badge()
-                    ->color(
-                        fn($state) =>
-                        $state === 'RECU' ? 'success' : 'secondary'
-                    )
-                    ->toggleable(isToggledHiddenByDefault: true),
 
                 /* ===============================
                  |  CLOTURE

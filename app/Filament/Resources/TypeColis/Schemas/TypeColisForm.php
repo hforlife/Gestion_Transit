@@ -13,11 +13,8 @@ class TypeColisForm
     {
         return $schema
             ->components([
-                Select::make('nom')
-                ->options([
-                        'Véhicules' => 'Véhicules',
-                        'Conteneur' => 'Conteneur',
-                    ])
+                TextInput::make('nom')
+                    ->placeholder('Nom du type de colis')
                     ->required(),
                 TextInput::make('description'),
                 Toggle::make('is_active')
